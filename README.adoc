@@ -1,5 +1,5 @@
 judo-generator-commons
-------------------
+----------------------
 
 JUDO Generator Commons project contains helpers, annotations and maven utils which can be used on a generator engine development
 
