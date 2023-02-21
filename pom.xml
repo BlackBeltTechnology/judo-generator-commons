@@ -551,7 +551,7 @@
             </distributionManagement>
         </profile>
 
-        
+
         <profile>
             <id>update-source-code-license</id>
             <build>
