@@ -1,4 +1,4 @@
-package hu.blackbelt.judo.generator.commons.annotations;
+package hu.blackbelt.judo.generator.commons;
 
 /*-
  * #%L
@@ -20,12 +20,21 @@ package hu.blackbelt.judo.generator.commons.annotations;
  * #L%
  */
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import lombok.Builder;
+import lombok.Getter;
 
-@Target({ ElementType.TYPE })
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ContextAccessor {
+import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+@Builder(builderMethodName = "generatorResult")
+@Getter
+public final class GeneratorResult<D> {
+
+    @Builder.Default
+    Map<D, Collection<GeneratedFile>> generatedByDiscriminator = new ConcurrentHashMap<>();
+
+    @Builder.Default
+    Collection<GeneratedFile> generated = new CopyOnWriteArrayList<>();
 }

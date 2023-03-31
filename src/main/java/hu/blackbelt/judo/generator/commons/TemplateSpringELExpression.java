@@ -1,4 +1,4 @@
-package hu.blackbelt.judo.generator.commons.annotations;
+package hu.blackbelt.judo.generator.commons;
 
 /*-
  * #%L
@@ -20,12 +20,16 @@ package hu.blackbelt.judo.generator.commons.annotations;
  * #L%
  */
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Target({ ElementType.TYPE })
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ContextAccessor {
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+public class TemplateSpringELExpression {
+    private String name;
+    private String expression;
 }
