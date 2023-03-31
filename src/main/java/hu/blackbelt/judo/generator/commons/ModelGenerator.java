@@ -279,7 +279,6 @@ public class ModelGenerator<M> {
         }
 
         ModelGeneratorContext modelGeneratorContext = ModelGeneratorContext.builder()
-//                .psmModel(args.psmModel)
                 .templateLoader(urlTemplateLoader)
                 .urlResolver(urlResolver)
                 .generatorModel(generatorModel)
