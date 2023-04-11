@@ -92,18 +92,18 @@ public class GeneratorTemplate {
         return templateExpressions;
     }
 
-    public TemplateEvaluator getTemplateEvalulator(ModelGeneratorContext projectGenerator, StandardEvaluationContext standardEvaluationContext) throws IOException {
-        return new TemplateEvaluator(projectGenerator, this, standardEvaluationContext);
+    public TemplateEvaulator getTemplateEvalulator(ModelGeneratorContext projectGenerator, StandardEvaluationContext standardEvaluationContext) throws IOException {
+        return new TemplateEvaulator(projectGenerator, this, standardEvaluationContext);
     }
 
-    public void evalToContextBuilder(TemplateEvaluator templateEvaluator, Context.Builder contextBuilder, StandardEvaluationContext templateExpressionContext) {
+    public void evalToContextBuilder(TemplateEvaulator templateEvaulator, Context.Builder contextBuilder, StandardEvaluationContext templateExpressionContext) {
         templateContext.stream().forEach(ctx -> {
-            Expression expression = templateEvaluator.getTemplateExpressions().get(ctx.getName());
+            Expression expression = templateEvaulator.getTemplateExpressions().get(ctx.getName());
             if (expression != null) {
                 try {
-                    Class type = templateEvaluator.getTemplateExpressions().get(ctx.getName()).getValueType(templateExpressionContext);
-                    Object rootObject = templateEvaluator.getTemplateExpressions().get(ctx.getName()).getValue(templateExpressionContext, type);
-                    Object value = templateEvaluator.getTemplateExpressions().get(ctx.getName()).getValue(templateExpressionContext, rootObject);
+                    Class type = templateEvaulator.getTemplateExpressions().get(ctx.getName()).getValueType(templateExpressionContext);
+                    Object rootObject = templateEvaulator.getTemplateExpressions().get(ctx.getName()).getValue(templateExpressionContext, type);
+                    Object value = templateEvaulator.getTemplateExpressions().get(ctx.getName()).getValue(templateExpressionContext, rootObject);
                     contextBuilder.combine(ctx.getName(), value);
                 } catch (Exception e) {
                     throw new IllegalArgumentException("Could not evaluate template context expression: " + expression.getExpressionString() + " in " + this);

@@ -58,9 +58,16 @@ public class GeneratorModel {
     @Builder.Default
     private Collection<GeneratorTemplate> templates = new HashSet<>();
 
-    public static GeneratorModel loadYamlURL(String originalUri, URL yaml) throws IOException {
+    public static GeneratorModel loadYamlURL(String originalUri, URL yaml, ModelGenerator.CreateGeneratorContextArgument args) throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.enable(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT);
+        if (args.generatorModelMixin != null) {
+            mapper.addMixIn(GeneratorModel.class, args.generatorModelMixin.get());
+        }
+        if (args.generatorTemplateMixin != null) {
+            mapper.addMixIn(GeneratorTemplate.class, args.generatorTemplateMixin.get());
+        }
+
         GeneratorModel model = null;
         try {
             InputStream is = yaml.openStream();

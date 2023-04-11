@@ -61,7 +61,7 @@ public class ModelGenerator<M> {
     public static GeneratedFile generateFile(
             final ModelGeneratorContext generatorContext,
             final StandardEvaluationContext evaluationContext,
-            final TemplateEvaluator templateEvaulator,
+            final TemplateEvaulator templateEvaulator,
             final GeneratorTemplate generatorTemplate,
             final Context.Builder contextBuilder,
             final Log log) {
@@ -211,6 +211,13 @@ public class ModelGenerator<M> {
         Function<Collection<URI>, URLTemplateLoader> urlTemplateLoaderFactory = null;
         @Builder.Default
         Function<Collection<URI>, URLResolver> urlResolverFactory = null;
+
+        @Builder.Default
+        Supplier<Class<?>> generatorModelMixin = null;
+
+        @Builder.Default
+        Supplier<Class<?>> generatorTemplateMixin = null;
+
     }
 
     public static ModelGeneratorContext createGeneratorContext(CreateGeneratorContextArgument args) throws IOException {
@@ -246,7 +253,8 @@ public class ModelGenerator<M> {
 
         for (Map.Entry<String, URI> entry : args.uris.entrySet()) {
             GeneratorModel model = GeneratorModel.loadYamlURL(entry.getKey(),
-                    UriHelper.calculateRelativeURI(entry.getValue(), args.descriptorName + YAML).normalize().toURL());
+                    UriHelper.calculateRelativeURI(entry.getValue(), args.descriptorName + YAML).normalize().toURL(),
+                    args);
             if (entry == root) {
                 generatorModel = model;
             } else {

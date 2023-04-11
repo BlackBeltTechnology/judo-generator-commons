@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.util.Map;
 
 @Getter
-public class TemplateEvaluator {
+public class TemplateEvaulator {
     final Expression factoryExpression;
     final Expression pathExpression;
     final Template template;
@@ -38,7 +38,7 @@ public class TemplateEvaluator {
     final ModelGeneratorContext projectGenerator;
     final StandardEvaluationContext standardEvaluationContext;
 
-    public TemplateEvaluator(ModelGeneratorContext projectGenerator, GeneratorTemplate generatorTemplate, StandardEvaluationContext standardEvaluationContext) throws IOException {
+    public TemplateEvaulator(ModelGeneratorContext projectGenerator, GeneratorTemplate generatorTemplate, StandardEvaluationContext standardEvaluationContext) throws IOException {
         this.projectGenerator = projectGenerator;
         this.standardEvaluationContext = standardEvaluationContext;
         ExpressionParser parser = generatorTemplate.getParser();
