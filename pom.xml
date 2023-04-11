@@ -46,6 +46,8 @@
         <!--suppress UnresolvedMavenProperty -->
         <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
 
+        <epsilon-runtime-version>1.5.1.20230310_040746_cc563145_develop</epsilon-runtime-version>
+
         <!-- Code Quality-->
         <sonar-maven-plugin-version>3.9.1.2184</sonar-maven-plugin-version>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -170,6 +172,30 @@
             <version>4.8.152</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-expression</artifactId>
+            <version>5.0.0.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>2.10.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.10.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>hu.blackbelt.epsilon</groupId>
+            <artifactId>epsilon-runtime-execution</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>
@@ -220,6 +246,19 @@
                 <groupId>hu.blackbelt.bundles.throwing-function</groupId>
                 <artifactId>com.pivovarit.throwing-function</artifactId>
                 <version>1.5.1_1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>hu.blackbelt.epsilon</groupId>
+                <artifactId>epsilon-runtime-osgi</artifactId>
+                <version>${epsilon-runtime-version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>hu.blackbelt.epsilon</groupId>
+                <artifactId>epsilon-runtime-execution</artifactId>
+                <version>${epsilon-runtime-version}</version>
+                <scope>provided</scope>
             </dependency>
 
         </dependencies>
