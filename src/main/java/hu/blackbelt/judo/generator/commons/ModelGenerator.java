@@ -38,6 +38,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -74,7 +78,6 @@ public class ModelGenerator<M> {
             throw new IllegalArgumentException("Could not evaluate path expression in " + generatorTemplate.toString());
         }
 
-
         if (generatorTemplate.isCopy()) {
             String location = generatorTemplate.getTemplateName();
             if (location.startsWith("/")) {
@@ -102,6 +105,22 @@ public class ModelGenerator<M> {
             }
             generatedFile.setContent(sourceFile.toString().getBytes(Charsets.UTF_8));
         }
+
+        String permissions = null;
+        if (generatorTemplate.getPermission() != null) {
+            permissions = generatorTemplate.getPermission();
+        } else if (generatorContext.getGeneratorModel().getPermission() != null) {
+            permissions = generatorContext.getGeneratorModel().getPermission();
+        }
+        if (permissions != null) {
+            try {
+                Set<PosixFilePermission> posixFilePermissions = PosixFilePermissions.fromString(permissions);
+                generatedFile.setPermissions(posixFilePermissions);
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Illegal permission for: " + generatedFile.getPath() + " Permission: " + permissions);
+            }
+        }
+
         return generatedFile;
     }
 
@@ -109,22 +128,7 @@ public class ModelGenerator<M> {
         return e -> {
             File targetDirectory = actorTypeTargetDirectoryResolver.apply(e.getKey());
             GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
-            e.getValue().stream().forEach(f -> {
-                File outFile = new File(targetDirectory, f.getPath());
-                outFile.getParentFile().mkdirs();
-                if (!generatorIgnore.shouldExcludeFile(outFile.toPath())) {
-                    try {
-                        if (outFile.exists()) {
-                            log.debug("File already exists, overwrite: " + outFile.getAbsolutePath());
-                            outFile.delete();
-                        }
-                        ByteStreams.copy(new ByteArrayInputStream(f.getContent()), new FileOutputStream(outFile));
-                    } catch (Exception exception) {
-                        log.error("Could not write file: " + outFile.getAbsolutePath());
-                        throw new RuntimeException(exception);
-                    }
-                }
-            });
+            e.getValue().forEach(f -> writeFile(targetDirectory, generatorIgnore, f));
         };
     }
 
@@ -132,24 +136,46 @@ public class ModelGenerator<M> {
         return e -> {
             File targetDirectory = targetDirectoryResolver.get();
             GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
-            e.stream().forEach(f -> {
-                File outFile = new File(targetDirectory, f.getPath());
-                outFile.getParentFile().mkdirs();
-                if (!generatorIgnore.shouldExcludeFile(outFile.toPath())) {
-                    try {
-                        if (outFile.exists()) {
-                            log.debug("File already exists, overwrite: " + outFile.getAbsolutePath());
-                            outFile.delete();
+            e.stream().forEach(f -> writeFile(targetDirectory, generatorIgnore, f));
+        };
+    }
+
+    public static void writeFile(File targetDirectory, GeneratorIgnore generatorIgnore, GeneratedFile generatedFile) {
+        File outFile = new File(targetDirectory, generatedFile.getPath());
+        outFile.getParentFile().mkdirs();
+        if (!generatorIgnore.shouldExcludeFile(outFile.toPath())) {
+            try {
+                if (outFile.exists()) {
+                    log.debug("File already exists, overwrite: " + outFile.getAbsolutePath());
+                    outFile.delete();
+                }
+                ByteStreams.copy(new ByteArrayInputStream(generatedFile.getContent()), new FileOutputStream(outFile));
+                if (generatedFile.getPermissions() != null) {
+                    if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+                        Files.setPosixFilePermissions(outFile.toPath(), generatedFile.getPermissions());
+                    } else {
+                        if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_EXECUTE)) {
+                            outFile.setExecutable(true,
+                                    !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_EXECUTE)
+                                            || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_EXECUTE)));
                         }
-                        ByteStreams.copy(new ByteArrayInputStream(f.getContent()), new FileOutputStream(outFile));
-                    } catch (Exception exception) {
-                        log.error("Could not write file: " + outFile.getAbsolutePath());
-                        throw new RuntimeException(exception);
+                        if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_READ)) {
+                            outFile.setReadable(true,
+                                    !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_READ)
+                                            || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_READ)));
+                        }
+                        if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_WRITE)) {
+                            outFile.setReadable(true,
+                                    !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_WRITE)
+                                            || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_WRITE)));
+                        }
                     }
                 }
-            });
-
-        };
+            } catch (Exception exception) {
+                log.error("Could not write file: " + outFile.getAbsolutePath());
+                throw new RuntimeException(exception);
+            }
+        }
     }
 
     public static void generateToDirectory(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
