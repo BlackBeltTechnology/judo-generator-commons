@@ -83,6 +83,9 @@ public class GeneratorTemplate {
     @Builder.Default
     private boolean copy = false;
 
+    @Builder.Default
+    private String permission = null;
+
     public Map<String, Expression> parseExpressions() {
         Map<String, Expression> templateExpressions = new HashMap<>();
         templateContext.stream().forEach(ctx -> {
