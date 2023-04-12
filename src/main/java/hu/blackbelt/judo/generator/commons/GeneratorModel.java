@@ -52,8 +52,7 @@ public class GeneratorModel {
     private String name = "not set";
 
     @Builder.Default
-    private Collection<TemplateSpringELExpression> templateContext = new HashSet();
-
+    private String permission = null;
 
     @Builder.Default
     private Collection<GeneratorTemplate> templates = new HashSet<>();

@@ -23,6 +23,9 @@ package hu.blackbelt.judo.generator.commons;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.Set;
+
 /**
  * It represents a generated file. It is used to write to directory or create a ZipStream.
  */
@@ -32,5 +35,7 @@ public class GeneratedFile {
 
     private String path;
     private byte[] content;
+
+    private Set<PosixFilePermission> permissions;
 
 }
