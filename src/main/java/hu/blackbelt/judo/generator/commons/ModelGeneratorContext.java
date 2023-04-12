@@ -102,7 +102,6 @@ public class ModelGeneratorContext {
         handlebars.prettyPrint(true);
         handlebars.setInfiniteLoops(true);
         handlebars.registerHelpers(StringHelpers.class);
-//        handlebars.registerHelpers(ActorTypeHelpers.class);
         for (Class clazz : helpers) {
             handlebars.registerHelpers(clazz);
         }

@@ -83,9 +83,6 @@ public class GeneratorModel {
         } catch (IOException e) {
             throw new IllegalArgumentException("Yaml file read error: " + yaml.toString(), e);
         }
-        // if (model != null) {
-        //    log.debug(ReflectionToStringBuilder.toString(model.getTemplates(), ToStringStyle.MULTI_LINE_STYLE));
-        // }
         return model;
     }
 
