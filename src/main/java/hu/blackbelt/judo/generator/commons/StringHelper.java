@@ -68,6 +68,9 @@ public class StringHelper extends StaticMethodValueResolver {
     }
 
     public static String cleanup(String string) {
+        if (string == null) {
+            return null;
+        }
         return string.replaceAll("[\\n\\t ]", "");
     }
 

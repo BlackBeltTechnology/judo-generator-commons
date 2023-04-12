@@ -68,7 +68,7 @@ public class GeneratorTemplate {
     private String templateBaseUri;
 
     @Builder.Default
-    private boolean actorTypeBased = false;
+    private boolean actorTypeBased = true;
 
     @Builder.Default
     private boolean exclude = false;
