@@ -52,7 +52,7 @@ public class GeneratorModel {
     private String name = "not set";
 
     @Builder.Default
-    private String permission = "rw-------";
+    private String permission = null;
 
     @Builder.Default
     private Collection<GeneratorTemplate> templates = new HashSet<>();
