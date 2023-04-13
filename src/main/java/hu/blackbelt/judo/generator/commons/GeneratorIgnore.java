@@ -20,43 +20,82 @@ package hu.blackbelt.judo.generator.commons;
  * #L%
  */
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
- * It reperesents the generation ignore. This is used to keep files, which cannot be overwrite within
+ * It represents the generation ignore. This is used to keep files, which cannot be overwrite within
  * a generation. The format is same as .gitignore
  */
 @Slf4j
 public class GeneratorIgnore {
     public static final String GENERATOR_IGNORE_FILE = ".generator-ignore";
     private static final String separator = System.getProperty("file.separator");
-    private List<String> globs = Collections.emptyList();
-    private final Path targetPath;
 
-    public GeneratorIgnore(Path targetPath) {
-        this.targetPath = targetPath.normalize();
-        try {
-            globs = Files.readAllLines(Paths.get(targetPath.toString(), GeneratorIgnore.GENERATOR_IGNORE_FILE), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            log.info("Generator ignore file(" + GENERATOR_IGNORE_FILE + ") not found at target path(" + targetPath + "), all sources will be generated.");
+    CacheLoader<Path, List<String>> loader = new CacheLoader<Path, List<String>>() {
+        @Override
+        public List<String> load(Path key) {
+            if (key.resolve(GENERATOR_IGNORE_FILE).toFile().exists()) {
+                try {
+                    List<String> globs = Files.readAllLines(key.resolve(GeneratorIgnore.GENERATOR_IGNORE_FILE), StandardCharsets.UTF_8);
+                    return globs;
+                } catch (IOException e) {
+                    throw new RuntimeException("Could not read file: " + key.resolve(GENERATOR_IGNORE_FILE).toFile().getAbsolutePath());
+                }
+            }
+            return Collections.emptyList();
         }
-    }
+    };
 
-    public List<String> getGlobs() {
-        return globs;
+    LoadingCache<Path, List<String>> cache = CacheBuilder.newBuilder().maximumSize(200).build(loader);
+
+    private final Path rootPath;
+
+    public GeneratorIgnore(Path rootPath) {
+        this.rootPath = rootPath.normalize();
     }
 
     public boolean shouldExcludeFile(Path absolutePath) {
-        Path relativePath = Paths.get(absolutePath.normalize().toString().replace(targetPath.toString() + separator, ""));
-        return globs.stream().anyMatch((glob) -> {
-            final PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
-            return pathMatcher.matches(relativePath);
-        });
+        if (!isChildPath(rootPath, absolutePath)) {
+            throw new IllegalArgumentException(absolutePath.toFile().getAbsolutePath() + " is not part of " + rootPath.toFile().getAbsolutePath());
+        }
+        Path currentPath = absolutePath.getParent();
+        boolean match = false;
+        while (!match && isChildPath(rootPath, currentPath)) {
+            try {
+                List<String> globs = cache.get(currentPath);
+                Path relativePath = Paths.get(absolutePath.normalize().toString().replace(currentPath.toString() + separator, ""));
+                match = globs.stream().anyMatch((glob) -> {
+                    final PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
+                    return pathMatcher.matches(relativePath);
+                });
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+            currentPath = currentPath.getParent();
+        }
+        return match;
+    }
+
+
+    private boolean isChildPath(Path possibleParent, Path maybeChild) {
+        File fileToTest = maybeChild.toFile();
+        while (fileToTest != null) {
+            if (fileToTest.equals(possibleParent.toFile()))
+                return true;
+            fileToTest = fileToTest.getParentFile();
+        }
+        return false;
     }
 }
