@@ -20,10 +20,8 @@ package hu.blackbelt.judo.generator.commons;
  * #L%
  */
 
-import hu.blackbelt.judo.generator.commons.GeneratorIgnore;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -31,7 +29,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
@@ -41,16 +38,42 @@ import static org.junit.jupiter.api.Assertions.*;
 public class GeneratorIgnoreTest {
     static final String TMP_DIR_PREFIX = "generatorIgnoreTestTarget";
     Path tmpTargetDir;
-    Path ignoreFilePath;
+    Path rootIgnoreFilePath;
+    Path level1IgnoreFilePath;
+
+    Path level2IgnoreFilePath;
+
+    Path level3IgnoreFilePath;
+
     GeneratorIgnore generatorIgnore;
 
     @BeforeEach
     public void setUp() throws Exception {
-        tmpTargetDir = Files.createTempDirectory(Paths.get("target"), TMP_DIR_PREFIX);
-        ignoreFilePath = Paths.get(tmpTargetDir.toString(), GeneratorIgnore.GENERATOR_IGNORE_FILE);
         String newLine = System.getProperty("line.separator");
-        String content = String.join(newLine, "**/*.php", "app.yaml", "folder-contents-to-ignore/**", "test/*/testing.txt");
-        Files.write(ignoreFilePath, content.getBytes(StandardCharsets.UTF_8));
+        tmpTargetDir = Files.createTempDirectory(Paths.get("target"), TMP_DIR_PREFIX);
+
+        rootIgnoreFilePath = Paths.get(tmpTargetDir.toString(), GeneratorIgnore.GENERATOR_IGNORE_FILE);
+        level1IgnoreFilePath = Paths.get(tmpTargetDir.toString(), "level1", GeneratorIgnore.GENERATOR_IGNORE_FILE);
+        level2IgnoreFilePath = Paths.get(tmpTargetDir.toString(), "level1", "level2", GeneratorIgnore.GENERATOR_IGNORE_FILE);
+        level3IgnoreFilePath = Paths.get(tmpTargetDir.toString(), "level1", "level2", "level3", GeneratorIgnore.GENERATOR_IGNORE_FILE);
+        level3IgnoreFilePath.getParent().toFile().mkdirs();
+
+        Files.write(rootIgnoreFilePath, String.join(newLine,
+    "**/*.php", "app.yaml", "folder-contents-to-ignore/**", "test/*/testing.txt", "level1/level2/level3/ignoredFromRoot")
+                .getBytes(StandardCharsets.UTF_8));
+
+        Files.write(level1IgnoreFilePath, String.join(newLine,
+    "level2/**/ignoredFromLevel1")
+                .getBytes(StandardCharsets.UTF_8));
+
+        Files.write(level2IgnoreFilePath, String.join(newLine,
+    "level3/ignoredFromLevel2")
+                .getBytes(StandardCharsets.UTF_8));
+
+        Files.write(level3IgnoreFilePath, String.join(newLine,
+    "ignoredFromLevel3")
+                .getBytes(StandardCharsets.UTF_8));
+
         generatorIgnore = new GeneratorIgnore(tmpTargetDir);
     }
 
@@ -61,23 +84,20 @@ public class GeneratorIgnoreTest {
 
     @Test
     void testIgnoreFileCreation() {
-        File fileWithAbsolutePath = ignoreFilePath.toFile();
+        File fileWithAbsolutePath = rootIgnoreFilePath.toFile();
 
         assertTrue(fileWithAbsolutePath.exists());
-    }
-
-    @Test
-    void testReadGlobs() {
-        assertEquals(Arrays.asList("**/*.php", "app.yaml", "folder-contents-to-ignore/**", "test/*/testing.txt"), generatorIgnore.getGlobs());
     }
 
     @Test
     void testShouldExcludeExplicitFileInRoot() {
         Path path1 = absolutePathFor("app.yaml");
         Path path2 = absolutePathFor("lol.yaml");
+        Path ignoredFromRoot = absolutePathFor("level1", "level2", "level3", "ignoredFromRoot");
 
         assertTrue(generatorIgnore.shouldExcludeFile(path1));
         assertFalse(generatorIgnore.shouldExcludeFile(path2));
+        assertTrue(generatorIgnore.shouldExcludeFile(ignoredFromRoot));
     }
 
     @Test
@@ -111,6 +131,33 @@ public class GeneratorIgnoreTest {
         assertTrue(generatorIgnore.shouldExcludeFile(path2));
         assertFalse(generatorIgnore.shouldExcludeFile(path3)); // only contents!
         assertFalse(generatorIgnore.shouldExcludeFile(path4));
+    }
+
+    @Test
+    void testShouldExcludeFilesFromLevel1() {
+        Path path1 = absolutePathFor("level1", "level2", "level3", "ignoredFromLevel1");
+        Path path2 = absolutePathFor("level1", "level2", "ignoredFromLevel1");
+        Path path3 = absolutePathFor("level1", "ignoredFromLevel1");
+
+        assertTrue(generatorIgnore.shouldExcludeFile(path1));
+        assertFalse(generatorIgnore.shouldExcludeFile(path2));
+        assertFalse(generatorIgnore.shouldExcludeFile(path3));
+    }
+
+    @Test
+    void testShouldExcludeFilesFromLevel2() {
+        Path path1 = absolutePathFor("level1", "level2", "level3", "ignoredFromLevel2");
+        Path path2 = absolutePathFor("level1", "level2", "ignoredFromLevel2");
+
+        assertTrue(generatorIgnore.shouldExcludeFile(path1));
+        assertFalse(generatorIgnore.shouldExcludeFile(path2));
+    }
+
+    @Test
+    void testShouldExcludeFilesFromLevel3() {
+        Path path1 = absolutePathFor("level1", "level2", "level3", "ignoredFromLevel3");
+
+        assertTrue(generatorIgnore.shouldExcludeFile(path1));
     }
 
     Path absolutePathFor(String... relativePath) {

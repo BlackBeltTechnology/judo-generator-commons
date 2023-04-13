@@ -38,8 +38,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.*;
@@ -47,6 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -57,6 +60,9 @@ import java.util.zip.ZipOutputStream;
  */
 @Slf4j
 public class ModelGenerator<M> {
+    public static final String NEWLINE = System.getProperty("line.separator");
+
+    public static final String GENERATED_FILES = ".generated-files";
 
     public static final String NAME = "name";
     public static final Boolean TEMPLATE_DEBUG = System.getProperty("templateDebug") != null;
@@ -128,7 +134,9 @@ public class ModelGenerator<M> {
         return e -> {
             File targetDirectory = actorTypeTargetDirectoryResolver.apply(e.getKey());
             GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
-            e.getValue().forEach(f -> writeFile(targetDirectory, generatorIgnore, f));
+            Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(e.getValue());
+            e.getValue().forEach(f -> writeFile(targetDirectory, generatorIgnore, f, generatorFileEntryCollection));
+            writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, GENERATED_FILES + "-actor");
         };
     }
 
@@ -136,11 +144,26 @@ public class ModelGenerator<M> {
         return e -> {
             File targetDirectory = targetDirectoryResolver.get();
             GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
-            e.stream().forEach(f -> writeFile(targetDirectory, generatorIgnore, f));
+            Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(e);
+            e.stream().forEach(f -> writeFile(targetDirectory, generatorIgnore, f, generatorFileEntryCollection));
+            writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, GENERATED_FILES);
         };
     }
 
-    public static void writeFile(File targetDirectory, GeneratorIgnore generatorIgnore, GeneratedFile generatedFile) {
+    public static List<GeneratorFileEntry> getGeneratorFiles(Collection<GeneratedFile> generatedFiles) {
+        ArrayList<GeneratorFileEntry> result = new ArrayList();
+        result.addAll(generatedFiles.stream().map(
+                        f -> GeneratorFileEntry.generatorFileEntry()
+                                .path(f.getPath())
+                                .md5(ChecksumUtil.getMD5(f.getContent())).build())
+                .collect(Collectors.toList()));
+
+        Collections.sort(result);
+        return result;
+    }
+
+
+    private static void writeFile(File targetDirectory, GeneratorIgnore generatorIgnore, GeneratedFile generatedFile, Collection<GeneratorFileEntry> generatorFileEntryCollection) {
         File outFile = new File(targetDirectory, generatedFile.getPath());
         outFile.getParentFile().mkdirs();
         if (!generatorIgnore.shouldExcludeFile(outFile.toPath())) {
@@ -175,6 +198,17 @@ public class ModelGenerator<M> {
                 log.error("Could not write file: " + outFile.getAbsolutePath());
                 throw new RuntimeException(exception);
             }
+        }
+    }
+
+    private static void writeGeneratedFiles(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection, String generatedFileName) {
+        try {
+            Files.write(Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
+                    String.join(NEWLINE, generatorFileEntryCollection.stream().map(f -> f.toString()).collect(Collectors.toList()))
+                            .getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new RuntimeException("Could not write file: "
+                    + Paths.get(targetDirectory.getAbsolutePath(), generatedFileName).toFile().getAbsolutePath(), e);
         }
     }
 
