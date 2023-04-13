@@ -22,19 +22,36 @@ package hu.blackbelt.judo.generator.commons;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
-@Builder(builderMethodName = "generatorResult")
+@Builder(builderMethodName = "generatorFileEntry")
 @Getter
-public final class GeneratorResult<D> {
+@Setter
+public final class GeneratorFileEntry implements Comparable {
 
-    @Builder.Default
-    Map<D, Collection<GeneratedFile>> generatedByDiscriminator = new ConcurrentHashMap<>();
+    @NonNull
+    String path;
 
-    @Builder.Default
-    Collection<GeneratedFile> generated = new CopyOnWriteArrayList<>();
+    @NonNull
+    String md5;
+
+    @Override
+    public int compareTo(Object o) {
+        if (o instanceof GeneratorFileEntry) {
+            GeneratorFileEntry fileEntry = (GeneratorFileEntry) o;
+            return this.getPath().compareTo(fileEntry.getPath());
+        }
+        return -1;
+    }
+
+    @Override
+    public String toString() {
+        return path + "," + md5;
+    }
 }
