@@ -130,8 +130,10 @@ public class ModelGenerator<M> {
         return generatedFile;
     }
 
-    public static <D> Consumer<Map.Entry<D, Collection<GeneratedFile>>> getDirectoryWriterForActor(Function<D, File> actorTypeTargetDirectoryResolver, Log log) {
-        return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-actor");
+    public static <D> Consumer<Map.Entry<D, Collection<GeneratedFile>>> getDirectoryWriterForActor(
+            Function<D, File> actorTypeTargetDirectoryResolver,
+            Function<D, String> actorTypeNameResolver,  Log log) {
+        return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()));
 
     }
 
@@ -146,11 +148,11 @@ public class ModelGenerator<M> {
         Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
 
         Map<String, GeneratorFileEntry> generatorFileEntryMap = generatorFileEntryCollection.stream()
-                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v));
+                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
         Map<String, GeneratorFileEntry> savedFileEntryMap = savedFileEntryCollection.stream()
-                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v));
+                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
         Map<String, GeneratorFileEntry> filesystemFileEntryMap = filesystemFileEntryCollection.stream()
-                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v));
+                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
 
         // Delete files which is presented in the saved entry collection and presented in the filesystem, but it's not presented
         // in the saved collection
@@ -181,7 +183,7 @@ public class ModelGenerator<M> {
                                 !(savedFileEntryMap.containsKey(f.getPath())
                                         && savedFileEntryMap.get(f.getPath()).getChecksum().equals(f.getChecksum())))
                 .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
-                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v));
+                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
 
         generatedFiles.parallelStream()
                 .filter(f -> haveToGenerate.containsKey(f.getPath()))
@@ -241,6 +243,7 @@ public class ModelGenerator<M> {
 
     public static void writeGeneratedFiles(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection, String generatedFileName) {
         try {
+            targetDirectory.mkdirs();
             Files.write(Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
                     String.join(NEWLINE, generatorFileEntryCollection.stream().map(f -> f.toString()).collect(Collectors.toList()))
                             .getBytes(StandardCharsets.UTF_8));
@@ -299,8 +302,11 @@ public class ModelGenerator<M> {
             result.generatedByDiscriminator
                     .entrySet()
                     .stream()
-                    .filter(e -> parameter.discriminatorPredicate.test(e.getKey()))
-                    .forEach(getDirectoryWriterForActor(parameter.discriminatorTargetDirectoryResolver, log));
+                    .filter(e -> parameter.getDiscriminatorPredicate().test(e.getKey()))
+                    .forEach(getDirectoryWriterForActor(
+                            parameter.getDiscriminatorTargetDirectoryResolver(),
+                            parameter.getDiscriminatorTargetNameResolver(),
+                            log));
             getDirectoryWriter(parameter.targetDirectoryResolver, log).accept(result.generated);
         } finally {
             if (loggerToBeClosed.get()) {

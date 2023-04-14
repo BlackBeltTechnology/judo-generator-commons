@@ -44,6 +44,9 @@ public final class GeneratorParameter<T> {
     Function<T, File> discriminatorTargetDirectoryResolver;
 
     @NonNull
+    Function<T, String> discriminatorTargetNameResolver;
+
+    @NonNull
     Supplier<File> targetDirectoryResolver;
 
     Log log;
