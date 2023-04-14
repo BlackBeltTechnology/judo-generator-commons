@@ -131,23 +131,22 @@ public class ModelGenerator<M> {
     }
 
     public static <D> Consumer<Map.Entry<D, Collection<GeneratedFile>>> getDirectoryWriterForActor(Function<D, File> actorTypeTargetDirectoryResolver, Log log) {
-        return e -> {
-            File targetDirectory = actorTypeTargetDirectoryResolver.apply(e.getKey());
-            GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
-            Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(e.getValue());
-            e.getValue().forEach(f -> writeFile(targetDirectory, generatorIgnore, f, generatorFileEntryCollection));
-            writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, GENERATED_FILES + "-actor");
-        };
+        return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-actor");
+
     }
 
     public static Consumer<Collection<GeneratedFile>> getDirectoryWriter(Supplier<File> targetDirectoryResolver, Log log) {
-        return e -> {
-            File targetDirectory = targetDirectoryResolver.get();
-            GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
-            Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(e);
-            e.stream().forEach(f -> writeFile(targetDirectory, generatorIgnore, f, generatorFileEntryCollection));
-            writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, GENERATED_FILES);
-        };
+        return e -> writeDirectory(e, targetDirectoryResolver.get(), GENERATED_FILES);
+    }
+
+    public static void writeDirectory(Collection<GeneratedFile> generatedFiles, File targetDirectory, String generatorFilesName) {
+        GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
+        Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(generatedFiles);
+        Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
+        Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
+
+        generatedFiles.parallelStream().forEach(f -> writeFile(targetDirectory, generatorIgnore, f, generatorFileEntryCollection));
+        writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, generatorFilesName);
     }
 
     public static List<GeneratorFileEntry> getGeneratorFiles(Collection<GeneratedFile> generatedFiles) {
@@ -155,7 +154,7 @@ public class ModelGenerator<M> {
         result.addAll(generatedFiles.stream().map(
                         f -> GeneratorFileEntry.generatorFileEntry()
                                 .path(f.getPath())
-                                .md5(ChecksumUtil.getMD5(f.getContent())).build())
+                                .checksum(ChecksumUtil.getMD5(f.getContent())).build())
                 .collect(Collectors.toList()));
 
         Collections.sort(result);
@@ -208,6 +207,37 @@ public class ModelGenerator<M> {
                             .getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new RuntimeException("Could not write file: "
+                    + Paths.get(targetDirectory.getAbsolutePath(), generatedFileName).toFile().getAbsolutePath(), e);
+        }
+    }
+
+    private static Collection<GeneratorFileEntry> readFilesystemEntries(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection) {
+
+        return generatorFileEntryCollection.parallelStream().map(f -> {
+            File file = new File(targetDirectory, f.getPath());
+            if (file.exists()) {
+                GeneratorFileEntry currentFileEntry = GeneratorFileEntry.generatorFileEntry()
+                        .checksum(ChecksumUtil.getMD5(file.toPath()))
+                        .path(f.getPath())
+                        .build();
+                return currentFileEntry;
+            }
+            return null;
+        }).filter(f -> f != null).collect(Collectors.toList());
+    }
+
+    private static Collection<GeneratorFileEntry> readGeneratedFiles(File targetDirectory, String generatedFileName) {
+        try {
+            if (Paths.get(targetDirectory.getAbsolutePath(), generatedFileName).toFile().exists()) {
+                List<String> files = Files.readAllLines(Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
+                        StandardCharsets.UTF_8);
+                List<GeneratorFileEntry> entries = files.stream().map(s -> GeneratorFileEntry.fromString(s)).collect(Collectors.toList());
+                return entries;
+            } else {
+                return Collections.emptyList();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not read file: "
                     + Paths.get(targetDirectory.getAbsolutePath(), generatedFileName).toFile().getAbsolutePath(), e);
         }
     }

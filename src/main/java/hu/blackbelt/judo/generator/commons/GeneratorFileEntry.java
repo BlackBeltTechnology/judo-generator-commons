@@ -25,11 +25,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 @Builder(builderMethodName = "generatorFileEntry")
 @Getter
 @Setter
@@ -39,7 +34,18 @@ public final class GeneratorFileEntry implements Comparable {
     String path;
 
     @NonNull
-    String md5;
+    String checksum;
+
+    public static GeneratorFileEntry fromString(String str) {
+        String[] parts = str.split(",");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Could not parse file entry: " + str);
+        }
+        return GeneratorFileEntry.generatorFileEntry()
+                .path(parts[0])
+                .checksum(parts[1])
+                .build();
+    }
 
     @Override
     public int compareTo(Object o) {
@@ -52,6 +58,20 @@ public final class GeneratorFileEntry implements Comparable {
 
     @Override
     public String toString() {
-        return path + "," + md5;
+        return getPath() + "," + getChecksum();
+    }
+
+    @Override
+    public int hashCode() {
+        return getPath().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof GeneratorFileEntry) {
+            GeneratorFileEntry fileEntry = (GeneratorFileEntry) o;
+            return this.getPath().equals(fileEntry.getPath()) && this.getChecksum().equals(fileEntry.getChecksum());
+        }
+        return false;
     }
 }
