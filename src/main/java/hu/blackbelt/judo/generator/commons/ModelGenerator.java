@@ -145,7 +145,48 @@ public class ModelGenerator<M> {
         Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
         Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
 
-        generatedFiles.parallelStream().forEach(f -> writeFile(targetDirectory, generatorIgnore, f, generatorFileEntryCollection));
+        Map<String, GeneratorFileEntry> generatorFileEntryMap = generatorFileEntryCollection.stream()
+                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v));
+        Map<String, GeneratorFileEntry> savedFileEntryMap = savedFileEntryCollection.stream()
+                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v));
+        Map<String, GeneratorFileEntry> filesystemFileEntryMap = filesystemFileEntryCollection.stream()
+                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v));
+
+        // Delete files which is presented in the saved entry collection and presented in the filesystem, but it's not presented
+        // in the saved collection
+        filesystemFileEntryCollection.parallelStream()
+                .filter(f -> !generatorFileEntryMap.containsKey(f.getPath()))
+                .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
+                .forEach(f -> new File(targetDirectory, f.getPath()).delete());
+
+        // Check files where filesystem checksum does not match with the last generated ones and it's not ignored.
+        List<GeneratorFileEntry> checksumMismatchInFilesystem = filesystemFileEntryCollection.stream()
+                .filter(f -> savedFileEntryMap.containsKey(f.getPath()))
+                .filter(f -> !f.getChecksum().equals(savedFileEntryMap.get(f.getPath()).getChecksum()))
+                .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
+                .collect(Collectors.toList());
+
+        if (checksumMismatchInFilesystem.size() > 0) {
+            throw new IllegalStateException("There are manual changes in the generated files.\n" +
+                    "Please discard the changes, delete file or put them to .generator-ignore:\n\t" +
+                    String.join("\n\t", checksumMismatchInFilesystem.stream()
+                            .map(f -> f.getPath()).collect(Collectors.toList())));
+        }
+
+        // Check files where generated checksum does not match with the last generated ones.
+        Map<String, GeneratorFileEntry> haveToGenerate = generatorFileEntryCollection.stream()
+                .filter(f ->
+                        !filesystemFileEntryMap.containsKey(f.getPath()) ||
+                        !savedFileEntryMap.containsKey(f.getPath()) ||
+                                !(savedFileEntryMap.containsKey(f.getPath())
+                                        && savedFileEntryMap.get(f.getPath()).getChecksum().equals(f.getChecksum())))
+                .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
+                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v));
+
+        generatedFiles.parallelStream()
+                .filter(f -> haveToGenerate.containsKey(f.getPath()))
+                .forEach(f -> writeFile(targetDirectory, generatorIgnore, f));
+
         writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, generatorFilesName);
     }
 
@@ -161,46 +202,44 @@ public class ModelGenerator<M> {
         return result;
     }
 
-
-    private static void writeFile(File targetDirectory, GeneratorIgnore generatorIgnore, GeneratedFile generatedFile, Collection<GeneratorFileEntry> generatorFileEntryCollection) {
+    private static void writeFile(File targetDirectory, GeneratorIgnore generatorIgnore, GeneratedFile generatedFile) {
         File outFile = new File(targetDirectory, generatedFile.getPath());
         outFile.getParentFile().mkdirs();
-        if (!generatorIgnore.shouldExcludeFile(outFile.toPath())) {
-            try {
-                if (outFile.exists()) {
-                    log.debug("File already exists, overwrite: " + outFile.getAbsolutePath());
-                    outFile.delete();
-                }
-                ByteStreams.copy(new ByteArrayInputStream(generatedFile.getContent()), new FileOutputStream(outFile));
-                if (generatedFile.getPermissions() != null) {
-                    if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
-                        Files.setPosixFilePermissions(outFile.toPath(), generatedFile.getPermissions());
-                    } else {
-                        if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_EXECUTE)) {
-                            outFile.setExecutable(true,
-                                    !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_EXECUTE)
-                                            || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_EXECUTE)));
-                        }
-                        if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_READ)) {
-                            outFile.setReadable(true,
-                                    !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_READ)
-                                            || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_READ)));
-                        }
-                        if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_WRITE)) {
-                            outFile.setReadable(true,
-                                    !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_WRITE)
-                                            || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_WRITE)));
-                        }
+
+        try {
+            if (outFile.exists()) {
+                log.debug("File already exists, overwrite: " + outFile.getAbsolutePath());
+                outFile.delete();
+            }
+            ByteStreams.copy(new ByteArrayInputStream(generatedFile.getContent()), new FileOutputStream(outFile));
+            if (generatedFile.getPermissions() != null) {
+                if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+                    Files.setPosixFilePermissions(outFile.toPath(), generatedFile.getPermissions());
+                } else {
+                    if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_EXECUTE)) {
+                        outFile.setExecutable(true,
+                                !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_EXECUTE)
+                                        || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_EXECUTE)));
+                    }
+                    if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_READ)) {
+                        outFile.setReadable(true,
+                                !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_READ)
+                                        || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_READ)));
+                    }
+                    if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_WRITE)) {
+                        outFile.setReadable(true,
+                                !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_WRITE)
+                                        || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_WRITE)));
                     }
                 }
-            } catch (Exception exception) {
-                log.error("Could not write file: " + outFile.getAbsolutePath());
-                throw new RuntimeException(exception);
             }
+        } catch (Exception exception) {
+            log.error("Could not write file: " + outFile.getAbsolutePath());
+            throw new RuntimeException(exception);
         }
     }
 
-    private static void writeGeneratedFiles(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection, String generatedFileName) {
+    public static void writeGeneratedFiles(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection, String generatedFileName) {
         try {
             Files.write(Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
                     String.join(NEWLINE, generatorFileEntryCollection.stream().map(f -> f.toString()).collect(Collectors.toList()))
@@ -211,7 +250,7 @@ public class ModelGenerator<M> {
         }
     }
 
-    private static Collection<GeneratorFileEntry> readFilesystemEntries(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection) {
+    public static Collection<GeneratorFileEntry> readFilesystemEntries(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection) {
 
         return generatorFileEntryCollection.parallelStream().map(f -> {
             File file = new File(targetDirectory, f.getPath());
@@ -226,7 +265,7 @@ public class ModelGenerator<M> {
         }).filter(f -> f != null).collect(Collectors.toList());
     }
 
-    private static Collection<GeneratorFileEntry> readGeneratedFiles(File targetDirectory, String generatedFileName) {
+    public static Collection<GeneratorFileEntry> readGeneratedFiles(File targetDirectory, String generatedFileName) {
         try {
             if (Paths.get(targetDirectory.getAbsolutePath(), generatedFileName).toFile().exists()) {
                 List<String> files = Files.readAllLines(Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
