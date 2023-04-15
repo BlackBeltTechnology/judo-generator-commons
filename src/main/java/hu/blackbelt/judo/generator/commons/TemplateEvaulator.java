@@ -21,12 +21,15 @@ package hu.blackbelt.judo.generator.commons;
  */
 
 import com.github.jknack.handlebars.Template;
+import com.google.common.collect.Lists;
 import lombok.Getter;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
 @Getter
@@ -64,11 +67,21 @@ public class TemplateEvaulator {
         if (getFactoryExpression() == null && type.isAssignableFrom(value.getClass())) {
             return (C) value;
         } else {
+            Object ret = null;
             try {
-                return getFactoryExpression().getValue(standardEvaluationContext, value, type);
+                ret =  getFactoryExpression().getValue(standardEvaluationContext, value, type);
             } catch (Exception e) {
                 throw new IllegalArgumentException("Could not evaluate factory expression in " + template.toString());
             }
+
+            if (!type.isAssignableFrom(ret.getClass())) {
+                if (Collection.class.isAssignableFrom(ret.getClass())) {
+                    return (C) Collections.singletonList(ret);
+                } else {
+                    throw new IllegalArgumentException("Could not cast return type to expected type and expected type is not collection." + template.toString());
+                }
+            }
+            return (C) ret;
         }
     }
 }
