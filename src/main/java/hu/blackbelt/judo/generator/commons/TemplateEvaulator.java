@@ -21,7 +21,6 @@ package hu.blackbelt.judo.generator.commons;
  */
 
 import com.github.jknack.handlebars.Template;
-import com.google.common.collect.Lists;
 import lombok.Getter;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;

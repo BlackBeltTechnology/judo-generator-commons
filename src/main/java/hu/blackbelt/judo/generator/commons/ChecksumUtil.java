@@ -51,7 +51,7 @@ public class ChecksumUtil {
             }
             return format(md.digest());
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Could not nget Md5 sum", e);
+            throw new RuntimeException("Could not get Md5 sum", e);
         }
     }
 

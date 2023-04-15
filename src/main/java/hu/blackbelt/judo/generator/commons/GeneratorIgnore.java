@@ -51,7 +51,7 @@ public class GeneratorIgnore {
                     List<String> globs = Files.readAllLines(key.resolve(GeneratorIgnore.GENERATOR_IGNORE_FILE), StandardCharsets.UTF_8);
                     return globs;
                 } catch (IOException e) {
-                    throw new RuntimeException("Could not read file: " + key.resolve(GENERATOR_IGNORE_FILE).toFile().getAbsolutePath());
+                    throw new RuntimeException("Could not read file: " + key.resolve(GENERATOR_IGNORE_FILE).toFile().getAbsolutePath(), e);
                 }
             }
             return Collections.emptyList();
@@ -92,8 +92,9 @@ public class GeneratorIgnore {
     private boolean isChildPath(Path possibleParent, Path maybeChild) {
         File fileToTest = maybeChild.toFile();
         while (fileToTest != null) {
-            if (fileToTest.equals(possibleParent.toFile()))
+            if (fileToTest.equals(possibleParent.toFile())) {
                 return true;
+            }
             fileToTest = fileToTest.getParentFile();
         }
         return false;
