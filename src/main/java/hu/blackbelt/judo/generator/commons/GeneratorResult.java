@@ -23,10 +23,10 @@ package hu.blackbelt.judo.generator.commons;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 @Builder(builderMethodName = "generatorResult")
 @Getter
