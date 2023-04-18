@@ -120,7 +120,7 @@ public class ModelGeneratorTest {
         assertThrows(IllegalStateException.class, () ->
                 ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES));
 
-        ModelGenerator.recalculateChucksumForDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.recalculateChecksumToDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
 
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
     }

@@ -193,18 +193,18 @@ public class ModelGenerator<M> {
     }
 
 
-    public static <D> Consumer<Map.Entry<D, Collection<GeneratedFile>>> getChecksumCalculatorForActor(
+    public static <D> Consumer<D> getDirectoryChecksumCalculatorForActor(
             Function<D, File> actorTypeTargetDirectoryResolver,
-            Function<D, String> actorTypeNameResolver,  Log log) {
-        return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()));
+            Function<D, String> actorTypeNameResolver) {
+        return e -> recalculateChecksumToDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
 
     }
 
-    public static Consumer<Collection<GeneratedFile>> getChecksumCalculator(Supplier<File> targetDirectoryResolver, Log log) {
-        return e -> recalculateChucksumForDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
+    public static Runnable getDirectoryChecksumCalculator(Supplier<File> targetDirectoryResolver) {
+        return () -> recalculateChecksumToDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
     }
 
-    public static void recalculateChucksumForDirectory(File targetDirectory, String generatorFilesName) {
+    public static void recalculateChecksumToDirectory(File targetDirectory, String generatorFilesName) {
         Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
         Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
         writeGeneratedFiles(targetDirectory, filesystemFileEntryCollection, generatorFilesName);
@@ -332,6 +332,14 @@ public class ModelGenerator<M> {
             }
         }
     }
+
+    public static <T> void recalculateChecksumToDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) {
+        discriminators.forEach(getDirectoryChecksumCalculatorForActor(
+                parameter.getDiscriminatorTargetDirectoryResolver(),
+                parameter.getDiscriminatorTargetNameResolver()));
+        getDirectoryChecksumCalculator(parameter.targetDirectoryResolver).run();
+    }
+
 
     @SneakyThrows(IOException.class)
     public static InputStream getGeneratedFilesAsZip(Collection<GeneratedFile> generatedFiles) {
