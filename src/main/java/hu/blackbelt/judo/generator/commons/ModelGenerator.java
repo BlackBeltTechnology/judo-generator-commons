@@ -192,6 +192,24 @@ public class ModelGenerator<M> {
         writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, generatorFilesName);
     }
 
+
+    public static <D> Consumer<Map.Entry<D, Collection<GeneratedFile>>> getChecksumCalculatorForActor(
+            Function<D, File> actorTypeTargetDirectoryResolver,
+            Function<D, String> actorTypeNameResolver,  Log log) {
+        return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()));
+
+    }
+
+    public static Consumer<Collection<GeneratedFile>> getChecksumCalculator(Supplier<File> targetDirectoryResolver, Log log) {
+        return e -> recalculateChucksumForDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
+    }
+
+    public static void recalculateChucksumForDirectory(File targetDirectory, String generatorFilesName) {
+        Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
+        Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
+        writeGeneratedFiles(targetDirectory, filesystemFileEntryCollection, generatorFilesName);
+    }
+
     public static List<GeneratorFileEntry> getGeneratorFiles(Collection<GeneratedFile> generatedFiles) {
         ArrayList<GeneratorFileEntry> result = new ArrayList();
         result.addAll(generatedFiles.stream().map(
