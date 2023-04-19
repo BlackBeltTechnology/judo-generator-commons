@@ -111,6 +111,21 @@ public class ModelGeneratorTest {
     }
 
     @Test
+    void testChecksumRegeneration() throws IOException {
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+
+        Path file1 = absolutePathFor("level1", "file1");
+        Files.write(file1, "level1/file1Modified".getBytes(StandardCharsets.UTF_8));
+
+        assertThrows(IllegalStateException.class, () ->
+                ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES));
+
+        ModelGenerator.recalculateChecksumToDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+    }
+
+    @Test
     void testGeneratedFileChanges() throws IOException {
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
 

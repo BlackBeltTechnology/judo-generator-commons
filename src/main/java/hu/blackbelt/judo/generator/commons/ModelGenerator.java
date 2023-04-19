@@ -192,6 +192,24 @@ public class ModelGenerator<M> {
         writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, generatorFilesName);
     }
 
+
+    public static <D> Consumer<D> getDirectoryChecksumCalculatorForActor(
+            Function<D, File> actorTypeTargetDirectoryResolver,
+            Function<D, String> actorTypeNameResolver) {
+        return e -> recalculateChecksumToDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
+
+    }
+
+    public static Runnable getDirectoryChecksumCalculator(Supplier<File> targetDirectoryResolver) {
+        return () -> recalculateChecksumToDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
+    }
+
+    public static void recalculateChecksumToDirectory(File targetDirectory, String generatorFilesName) {
+        Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
+        Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
+        writeGeneratedFiles(targetDirectory, filesystemFileEntryCollection, generatorFilesName);
+    }
+
     public static List<GeneratorFileEntry> getGeneratorFiles(Collection<GeneratedFile> generatedFiles) {
         ArrayList<GeneratorFileEntry> result = new ArrayList();
         result.addAll(generatedFiles.stream().map(
@@ -314,6 +332,14 @@ public class ModelGenerator<M> {
             }
         }
     }
+
+    public static <T> void recalculateChecksumToDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) {
+        discriminators.forEach(getDirectoryChecksumCalculatorForActor(
+                parameter.getDiscriminatorTargetDirectoryResolver(),
+                parameter.getDiscriminatorTargetNameResolver()));
+        getDirectoryChecksumCalculator(parameter.targetDirectoryResolver).run();
+    }
+
 
     @SneakyThrows(IOException.class)
     public static InputStream getGeneratedFilesAsZip(Collection<GeneratedFile> generatedFiles) {
