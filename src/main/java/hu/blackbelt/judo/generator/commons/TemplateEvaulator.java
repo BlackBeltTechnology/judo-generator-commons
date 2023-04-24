@@ -70,7 +70,7 @@ public class TemplateEvaulator {
             try {
                 ret =  getFactoryExpression().getValue(standardEvaluationContext, value, type);
             } catch (Exception e) {
-                throw new IllegalArgumentException("Could not evaluate factory expression in " + template.toString());
+                throw new IllegalArgumentException("Could not evaluate factory expression in " + template.toString(), e);
             }
 
             if (!type.isAssignableFrom(ret.getClass())) {
