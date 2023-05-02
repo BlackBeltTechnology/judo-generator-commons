@@ -132,16 +132,16 @@ public class ModelGenerator<M> {
 
     public static <D> Consumer<Map.Entry<D, Collection<GeneratedFile>>> getDirectoryWriterForActor(
             Function<D, File> actorTypeTargetDirectoryResolver,
-            Function<D, String> actorTypeNameResolver,  Log log) {
-        return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()));
+            Function<D, String> actorTypeNameResolver,  boolean validateChecksum, Log log) {
+        return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()), validateChecksum);
 
     }
 
-    public static Consumer<Collection<GeneratedFile>> getDirectoryWriter(Supplier<File> targetDirectoryResolver, Log log) {
-        return e -> writeDirectory(e, targetDirectoryResolver.get(), GENERATED_FILES);
+    public static Consumer<Collection<GeneratedFile>> getDirectoryWriter(Supplier<File> targetDirectoryResolver, boolean validateChecksum, Log log) {
+        return e -> writeDirectory(e, targetDirectoryResolver.get(), GENERATED_FILES, validateChecksum);
     }
 
-    public static void writeDirectory(Collection<GeneratedFile> generatedFiles, File targetDirectory, String generatorFilesName) {
+    public static void writeDirectory(Collection<GeneratedFile> generatedFiles, File targetDirectory, String generatorFilesName, boolean validateChecksum) {
         GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
         Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(generatedFiles);
         Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
@@ -161,18 +161,20 @@ public class ModelGenerator<M> {
                 .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
                 .forEach(f -> new File(targetDirectory, f.getPath()).delete());
 
-        // Check files where filesystem checksum does not match with the last generated ones and it's not ignored.
-        List<GeneratorFileEntry> checksumMismatchInFilesystem = filesystemFileEntryCollection.stream()
-                .filter(f -> savedFileEntryMap.containsKey(f.getPath()))
-                .filter(f -> !f.getChecksum().equals(savedFileEntryMap.get(f.getPath()).getChecksum()))
-                .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
-                .collect(Collectors.toList());
+        if (validateChecksum) {
+            // Check files where filesystem checksum does not match with the last generated ones and it's not ignored.
+            List<GeneratorFileEntry> checksumMismatchInFilesystem = filesystemFileEntryCollection.stream()
+                    .filter(f -> savedFileEntryMap.containsKey(f.getPath()))
+                    .filter(f -> !f.getChecksum().equals(savedFileEntryMap.get(f.getPath()).getChecksum()))
+                    .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
+                    .collect(Collectors.toList());
 
-        if (checksumMismatchInFilesystem.size() > 0) {
-            throw new IllegalStateException("There are manual changes in the generated files.\n" +
-                    "Please discard the changes, delete file or put them to .generator-ignore:\n\t" +
-                    String.join("\n\t", checksumMismatchInFilesystem.stream()
-                            .map(f -> f.getPath()).collect(Collectors.toList())));
+            if (checksumMismatchInFilesystem.size() > 0) {
+                throw new IllegalStateException("There are manual changes in the generated files.\n" +
+                        "Please discard the changes, delete file or put them to .generator-ignore:\n\t" +
+                        String.join("\n\t", checksumMismatchInFilesystem.stream()
+                                .map(f -> f.getPath()).collect(Collectors.toList())));
+            }
         }
 
         // Check files where generated checksum does not match with the last generated ones.
@@ -324,8 +326,9 @@ public class ModelGenerator<M> {
                     .forEach(getDirectoryWriterForActor(
                             parameter.getDiscriminatorTargetDirectoryResolver(),
                             parameter.getDiscriminatorTargetNameResolver(),
+                            parameter.isValidateChecksum(),
                             log));
-            getDirectoryWriter(parameter.targetDirectoryResolver, log).accept(result.generated);
+            getDirectoryWriter(parameter.targetDirectoryResolver, parameter.isValidateChecksum(), log).accept(result.generated);
         } finally {
             if (loggerToBeClosed.get()) {
                 log.close();
