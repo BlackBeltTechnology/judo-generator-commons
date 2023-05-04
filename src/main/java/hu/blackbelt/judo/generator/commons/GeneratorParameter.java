@@ -56,4 +56,7 @@ public final class GeneratorParameter<T> {
 
     @NonNull
     Function<GeneratorParameter<T>, GeneratorResult<T>> performExecutor;
+
+    @Builder.Default
+    boolean validateChecksum = true;
 }

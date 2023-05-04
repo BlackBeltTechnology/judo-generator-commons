@@ -65,7 +65,7 @@ public class ModelGeneratorTest {
 
     @Test
     void testFilesWritten() {
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
         Path generatedFile = absolutePathFor(ModelGenerator.GENERATED_FILES);
         Path file1 = absolutePathFor("level1", "file1");
@@ -88,46 +88,46 @@ public class ModelGeneratorTest {
 
     @Test
     void testGeneratedFileModification() throws IOException {
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
         Path file1 = absolutePathFor("level1", "file1");
         Files.write(file1, "level1/file1Modified".getBytes(StandardCharsets.UTF_8));
 
         assertThrows(IllegalStateException.class, () ->
-                ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES));
+                ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true));
 
         writeFile(tmpTargetDir.toFile(), GeneratorIgnore.GENERATOR_IGNORE_FILE, ImmutableList.of("level1/file1"));
 
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
         absolutePathFor(GeneratorIgnore.GENERATOR_IGNORE_FILE).toFile().delete();
 
         assertThrows(IllegalStateException.class, () ->
-                ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES));
+                ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true));
 
         file1.toFile().delete();
 
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
     }
 
     @Test
     void testChecksumRegeneration() throws IOException {
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
         Path file1 = absolutePathFor("level1", "file1");
         Files.write(file1, "level1/file1Modified".getBytes(StandardCharsets.UTF_8));
 
         assertThrows(IllegalStateException.class, () ->
-                ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES));
+                ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true));
 
         ModelGenerator.recalculateChecksumToDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
 
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
     }
 
     @Test
     void testGeneratedFileChanges() throws IOException {
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
         Map<String, GeneratedFile> generatedFileMap = generatedFileCollecton.stream()
                 .collect(Collectors.toMap(GeneratedFile::getPath, v -> v));
@@ -135,7 +135,7 @@ public class ModelGeneratorTest {
         generatedFileMap.get("level1/file1").setContent("level1/file1Modified".getBytes(StandardCharsets.UTF_8));
         Path file1 = absolutePathFor("level1", "file1");
 
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
         assertEquals("level1/file1Modified", Files.readAllLines(file1).get(0));
 
@@ -150,11 +150,11 @@ public class ModelGeneratorTest {
 
     @Test
     void testGeneratedFileRemove() {
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
         ModelGenerator.writeDirectory(generatedFileCollecton.stream()
                 .filter(f -> !f.getPath().equals("level1/file1")).collect(Collectors.toList()), tmpTargetDir.toFile(),
-                ModelGenerator.GENERATED_FILES);
+                ModelGenerator.GENERATED_FILES, true);
 
         Path generatedFile = absolutePathFor(ModelGenerator.GENERATED_FILES);
         Path file1 = absolutePathFor("level1", "file1");
@@ -180,7 +180,7 @@ public class ModelGeneratorTest {
     void testIgnore() throws IOException {
         writeFile(tmpTargetDir.toFile(), GeneratorIgnore.GENERATOR_IGNORE_FILE, ImmutableList.of("level1/file1"));
 
-        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
         Path generatedFile = absolutePathFor(ModelGenerator.GENERATED_FILES);
         Path file1 = absolutePathFor("level1", "file1");
