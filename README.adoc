@@ -1,5 +1,174 @@
-judo-generator-commons
-----------------------
+# Judo Generator Commons
 
 JUDO Generator Commons project contains helpers, annotations and maven utils which can be used on a generator engine development
 
+This is a general representation of the generator, which will be parameterized using one of the meta-models.
+We use the generator in these meta models:
+
+- judo-meta-esm
+- judo-meta-pam
+- judo-meta-ui
+
+There are 3 modules in these projects, which are related to the generator commons:
+
+- generator-engine
+- generator-maven-project
+- generator-maven-plugin-test
+
+The `generator-engine` teaches the generator commons how to release the items. This bind the meta model to the generator.
+Models are transformed into template parameters in this project.
+
+
+For example in the judo-meta-esm :
+
+    EsmGenerator.java -> Process of parameterization.
+
+    EsmGeneratorParamete.java -> This contains the model as a parameter, the generatorContext, the DirectoryResolvers etc.
+
+=== Description of a project
+
+The <project type>.yaml file describes what template is used for that and control which parameters are passed and the model can control HOW the templates can be used.
+Each generator-engine project has test directory with test project. This test project provides an example of how a `test-project.yaml` description looks like.
+
+Typically struct is :
+
+[source,yaml]
+----
+templates:
+
+  - name: testOverride
+    pathExpression: "#actorType.name + '/actorToOverride'"
+    templateName: test1/actorToOverride.hbs
+    actorTypeBased: true
+
+  - name: testReplace
+    pathExpression: "#actorType.name + '/actorToReplace'"
+    templateName: test1/actorToReplace.hbs
+    actorTypeBased: true
+
+  - name: testDelete
+    pathExpression: "#actorType.name + '/actorToDelete'"
+    templateName: test1/actorToDelete.hbs
+    actorTypeBased: true
+----
+
+* `templates`: This defines a list of templates.
+
+* `name`: This is like an id for the template. Based on this, we can override the template later.
+
+* `pathExpression`: This specifies where the generated file is located and under what name it will be generated. We use spring expression language (springEL), because handlebars only support string output.
+
+* `templateName`: The location of the handlebars file relative to the root.
+
+* `actorTypeBased`: When actorTypeBased template used, the template called for all actor types and the actorType variable is defined.
+
+[source,java]
+----
+//if the actorTypeBased is true, we need to defined in the EsmGeneratorParameter
+
+    @Builder.Default
+    Predicate<ActorType> actorTypePredicate = a -> true;
+
+    @NonNull
+    Function<ActorType, File> actorTypeTargetDirectoryResolver;
+
+----
+Not in the example :
+
+* `factoryExpression`: Factory expression is used to create files. It returns a list of objects which are used as root context for the given handlebar template.
+
+* `templateContext`: Template context is used to put expression result to template variable. (Not used often because of the helpers)
+
+* `copy`: It can be used to copy a binary file. In this case the template file used as binary, no templating is performed.
+
+* `permission`: It can be used to add execution permission to files. For example bash files.
+
+* `exclude`: This parameter can be used in an override to exclude the given template from a generation. With this parameter only the `name` is effective.
+
+=== GeneratorModel
+
+The `GeneratorModel` Java class loads the Handlebars files from the base directory and overrides them with the files from the override directory if it is necessary.
+The class contains a global permission parameter that adds a global permission to all of the Handlebars files.
+(The `GeneratorTemplate` Java class, contained within the GeneratorModel class, includes all of the YAML representations listed earlier. The GeneratorModel maps the YAML properties to the GeneratorTemplate.)
+
+=== Generator Maven Project
+
+https://github.com/BlackBeltTechnology/judo-meta-esm/tree/develop/generator-maven-plugin#readme[This] link contains the description of the generator maven plugin.
+
+=== Helper registration
+
+We don't register helpers manually. To register a java helper class use the `@TemplateHelper` annotation.
+
+IMPORTANT: The Java class method must be static.
+
+If you inherit your helper class from the `StaticMethodValueResolver` class, you can refer to its methods using dot notation.
+
+The helpers are available in springEL too with # prefix.
+
+=== Self meaning in different situations
+
+The self mean different thinks in the springEL and Handlebars depend on the YAML properties:
+
+- If actorTypeBased is enabled, then #self refers to the actor.
+
+- If we have a `factoryExpression`, then #self refers to the result of the factory expression.
+
+- If we do not have a `factoryExpression`, then #self refers to the model.
+
+=== How to reach templateParameters
+
+The problem with the templateParameters is that it is not static. This can cause issues with parallel building. To void
+this issue the `@ContextAccessor` annotation and a `bindContext` method.
+
+Example:
+[source,java]
+----
+@TemplateHelper
+@ContextAccessor
+public class StoredVariableHelper extends StaticMethodValueResolver {
+
+    public static void bindContext(Map<String, ?> context) {
+        ThreadLocalContextHolder.bindContext(context);
+    }
+
+    public static synchronized String getApiPrefixLocal(Object object) {
+        return (String) ThreadLocalContextHolder.getVariable("apiPrefix");
+    }
+
+    public static synchronized Boolean isGenerateOptionalTypes(Object object) {
+        return Boolean.parseBoolean((String) ThreadLocalContextHolder.getVariable("generateOptionalTypes"));
+    }
+
+    public static synchronized Boolean isGeneratePayloadValidator(Object object) {
+        return Boolean.parseBoolean((String) ThreadLocalContextHolder.getVariable("generatePayloadValidator"));
+    }
+}
+
+----
+
+This only need if we used the templateParameters in a java Helper.
+
+=== Checksum generation
+A checksum is a value calculated from data to detect errors during transmission or storage. It ensures data integrity and any mismatches indicate errors in the data.
+
+* The checksum generation is located in the generator-maven-plugin.
+
+* The [modelName]ProjectGenerateMojo is responsible for generating the files, while the [modelName]ProjectCalculateChecksumMojo is responsible for generating checksums for the files.
+
+* The .generated-files-[actor]-[actor] contains the actorTypeBased checksums. The .generated-files contains the not actorTypeBased checksums
+
+** A line contains a file name and a md5sum value.
+
+How it works now:
+
+* When index file is not present in the generation process, the system works like now, overwriting target files, additionally creating the index.
+
+* When a file is present in the generator ignore list during the index or new generation process, the index will still contain it but the file will be ignored in the checks and writing.
+
+* If a generated file have been modified by hand - the current checksum does not match with the last generation’s checksum, the system have to terminate with error “Generated file have been modified, please revert or delete it or add to generator-ignore”. When a file not presented in the index, it will be written and overwrite the existing files.
+
+* When a file presented on the stored index and the new generation does not contain it, have to be deleted.
+
+* When the new generation’s checksum * match with the current file’s checksum, do not touch it. It will help for compiler’s for incremental building.
+
+* We support generator ignore files in directory level, works like .gitignore.
