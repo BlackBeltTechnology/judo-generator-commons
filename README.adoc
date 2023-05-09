@@ -63,6 +63,7 @@ templates:
 
 * `actorTypeBased`: When actorTypeBased template used, the template called for all actor types and the actorType variable is defined.
 
+[source,java]
 ----
 //if the actorTypeBased is true, we need to defined in the EsmGeneratorParameter
 
@@ -149,4 +150,26 @@ public class StoredVariableHelper extends StaticMethodValueResolver {
 This only need if we used the templateParameters in a java Helper.
 
 === Checksum generation
+A checksum is a value calculated from data to detect errors during transmission or storage. It ensures data integrity and any mismatches indicate errors in the data.
 
+* The checksum generation is located in the generator-maven-plugin.
+
+* The [modelName]ProjectGenerateMojo is responsible for generating the files, while the [modelName]ProjectCalculateChecksumMojo is responsible for generating checksums for the files.
+
+* The .generated-files-[actor]-[actor] contains the actorTypeBased checksums. The .generated-files contains the not actorTypeBased checksums
+
+** A line contains a file name and a md5sum value.
+
+How it works now:
+
+* When index file is not present in the generation process, the system works like now, overwriting target files, additionally creating the index.
+
+* When a file is present in the generator ignore list during the index or new generation process, the index will still contain it but the file will be ignored in the checks and writing.
+
+* If a generated file have been modified by hand - the current checksum does not match with the last generation’s checksum, the system have to terminate with error “Generated file have been modified, please revert or delete it or add to generator-ignore”. When a file not presented in the index, it will be written and overwrite the existing files.
+
+* When a file presented on the stored index and the new generation does not contain it, have to be deleted.
+
+* When the new generation’s checksum * match with the current file’s checksum, do not touch it. It will help for compiler’s for incremental building.
+
+* We support generator ignore files in directory level, works like .gitignore.
