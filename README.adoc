@@ -102,7 +102,7 @@ We don't register helpers manually. To register a java helper class use the `@Te
 
 IMPORTANT: The Java class method must be static.
 
-If you inherit your helper class from the `StaticMethodValueResolver` class, you can refer to its methods using dot notation. (Black magic)
+If you inherit your helper class from the `StaticMethodValueResolver` class, you can refer to its methods using dot notation.
 
 The helpers are available in springEL too with # prefix.
 
@@ -119,7 +119,7 @@ The self mean different thinks in the springEL and Handlebars depend on the YAML
 === How to reach templateParameters
 
 The problem with the templateParameters is that it is not static. This can cause issues with parallel building. To void
-this issue the `@ContextAccessor` annotation and a `bindContext` method. (Magic Two)
+this issue the `@ContextAccessor` annotation and a `bindContext` method.
 
 Example:
 [source,java]
