@@ -60,6 +60,7 @@ public class GeneratorTemplate {
 
     private String factoryExpression;
     private String pathExpression;
+    private String conditionExpression;
 
     private String template;
 
