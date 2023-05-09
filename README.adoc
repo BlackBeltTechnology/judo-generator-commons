@@ -2,27 +2,26 @@
 
 JUDO Generator Commons project contains helpers, annotations and maven utils which can be used on a generator engine development
 
-== Description
-
 This is a general representation of the generator, which will be parameterized using one of the meta-models.
-We use the generator in this meta-models :
+We use the generator in these meta models:
 
 - judo-meta-esm
 - judo-meta-pam
 - judo-meta-ui
 
-There are 3 sub-projects in these projects, which are related to the generator commons:
+There are 3 modules in these projects, which are related to the generator commons:
 
 - generator-engine
 - generator-maven-project
 - generator-maven-plugin-test
 
-The `generator-engine` instructs the generator commons how to release the items. This bind the meta-model to the generator.
-Here converted the model into template parameters.
+The `generator-engine` teaches the generator commons how to release the items. This bind the meta model to the generator.
+Models are transformed into template parameters in this project.
+
 
 For example in the judo-meta-esm :
 
-    EsmGenerator.java -> Here happend the parameterization.
+    EsmGenerator.java -> Process of parameterization.
 
     EsmGeneratorParamete.java -> This contains the model as a parameter, the generatorContext, the DirectoryResolvers etc.
 
