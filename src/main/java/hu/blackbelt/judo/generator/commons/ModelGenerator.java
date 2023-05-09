@@ -76,7 +76,17 @@ public class ModelGenerator<M> {
             final Context.Builder contextBuilder,
             final Log log) {
 
+
         GeneratedFile generatedFile = new GeneratedFile();
+        boolean condition = true;
+        if (templateEvaulator.getConditionExpression() != null) {
+            try {
+                condition = templateEvaulator.getConditionExpression().getValue(evaluationContext, Boolean.class);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Could not evaluate condition expression in " + generatorTemplate.toString());
+            }
+        }
+        generatedFile.setCondition(condition);
 
         try {
             generatedFile.setPath(templateEvaulator.getPathExpression().getValue(evaluationContext, String.class));
@@ -142,8 +152,10 @@ public class ModelGenerator<M> {
     }
 
     public static void writeDirectory(Collection<GeneratedFile> generatedFiles, File targetDirectory, String generatorFilesName, boolean validateChecksum) {
+        Collection<GeneratedFile> generatedFilesFilteredWithCondition = generatedFiles.stream().filter(f -> f.isCondition()).collect(Collectors.toList());
+
         GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
-        Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(generatedFiles);
+        Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(generatedFilesFilteredWithCondition);
         Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
         Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
 
@@ -187,7 +199,7 @@ public class ModelGenerator<M> {
                 .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
                 .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
 
-        generatedFiles.parallelStream()
+        generatedFilesFilteredWithCondition.parallelStream()
                 .filter(f -> haveToGenerate.containsKey(f.getPath()))
                 .forEach(f -> writeFile(targetDirectory, generatorIgnore, f));
 

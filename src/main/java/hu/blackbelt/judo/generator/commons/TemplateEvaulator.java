@@ -35,6 +35,8 @@ import java.util.Map;
 public class TemplateEvaulator {
     final Expression factoryExpression;
     final Expression pathExpression;
+    final Expression conditionExpression;
+
     final Template template;
     final Map<String, Expression> templateExpressions;
     final ModelGeneratorContext projectGenerator;
@@ -51,6 +53,11 @@ public class TemplateEvaulator {
             factoryExpression = null;
         }
         pathExpression = parser.parseExpression(generatorTemplate.getPathExpression());
+        if (generatorTemplate.getConditionExpression() != null) {
+            conditionExpression = parser.parseExpression(generatorTemplate.getConditionExpression());
+        } else {
+            conditionExpression = null;
+        }
         if (generatorTemplate.isCopy()) {
             template = null;
         } else if (generatorTemplate.getTemplate() != null && !"".equals(generatorTemplate.getTemplate().trim())) {

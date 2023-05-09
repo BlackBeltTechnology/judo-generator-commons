@@ -40,4 +40,7 @@ public class GeneratedFile {
 
     private Set<PosixFilePermission> permissions;
 
+    @Builder.Default
+    private boolean condition = true;
+
 }
