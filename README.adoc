@@ -95,7 +95,6 @@ We can refer to self through the applicationAsVariable template context name.
 ----
 
 
-
 * `copy`: It can be used to copy a binary file. In this case the template file used as binary, no templating is performed.
 
 * `permission`: It can be used to add execution permission to files. For example bash files.
@@ -206,12 +205,35 @@ Example:
                         </configuration>
                     </execution>
 ----
-
 * The [modelName]ProjectGenerateMojo is responsible for generating the files, while the [modelName]ProjectCalculateChecksumMojo is responsible for generating checksums for the files.
 
 * The .generated-files-[actor]-[actor] contains the actorTypeBased checksums. The .generated-files contains the not actorTypeBased checksums
 
 ** A line contains a file name and a md5sum value.
+
+=== Generator ignore file
+
+IMPORTANT: Sometimes a developer needs to replace generated file with custom developed file. On that case the generator has to ignore the given file to keep the edited version. To achieve this `.generator-ignore` file can be used. In this case, every unexpected behavior is the responsibility of the developer.
+
+We use GLOB format, so the usage is same as .gitignore.
+
+Here is some example :
+
+* Ignore files with a specific extension: *.log, *.txt, *.docx
+
+* Ignore a specific file: config.ini, secrets.txt
+
+* Ignore a specific directory: node_modules/
+
+* Ignore all files in a directory except a specific file: docs/* (ignores all files in the docs directory), !docs/index.md (except for the index.md file in the docs directory)
+
+* Ignore files based on a pattern: *_backup (ignores all files with "_backup" in their name)
+
+* Ignore files based on their path: /bin/ (ignores the bin directory at the root of the project)
+
+* Ignore all .md files in the docs directory and its subdirectories: docs/\**/*.md
+
+* Ignore .init files in the src directory: src/*.init
 
 How it works now:
 
@@ -224,5 +246,3 @@ How it works now:
 * When a file presented on the stored index and the new generation does not contain it, have to be deleted.
 
 * When the new generation’s checksum * match with the current file’s checksum, do not touch it. It will help for compiler’s for incremental building.
-
-* We support generator ignore files in directory level, works like .gitignore.
