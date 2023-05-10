@@ -56,11 +56,15 @@ templates:
 
 * `name`: This is like an id for the template. Based on this, we can override the template later.
 
-* `pathExpression`: This specifies where the generated file is located and under what name it will be generated. We use spring expression language (springEL), because handlebars only support string output.
+* `pathExpression`: This specifies where the generated file is located and under what name it will be generated. We use spring expression language (https://docs.spring.io/spring-framework/docs/3.0.x/reference/expressions.html[springEL]), because handlebars only support string output.
 
-* `templateName`: The location of the handlebars file relative to the root.
+* `templateName`: The location of the handlebars file relative to the template root.
 
 * `actorTypeBased`: When actorTypeBased template used, the template called for all actor types and the actorType variable is defined.
+    ** We can override the name of the property. The ui meta model use applicationBased.
+    +
+    For example we can override in https://github.com/BlackBeltTechnology/judo-meta-ui/blob/develop/generator-engine/src/main/java/hu/blackbelt/judo/meta/ui/generator/engine/UiGeneratorTemplateMixin.java[this] way.
+    We use this class for the generationContext builder.
 
 [source,java]
 ----
@@ -73,15 +77,48 @@ templates:
     Function<ActorType, File> actorTypeTargetDirectoryResolver;
 
 ----
+
 Not in the example :
 
 * `factoryExpression`: Factory expression is used to create files. It returns a list of objects which are used as root context for the given handlebar template.
 
-* `templateContext`: Template context is used to put expression result to template variable. (Not used often because of the helpers)
+* `templateContext`: Template context is used to put expression result to template variable. We can refer to the expression through the template context name. (Not used often because of the helpers)
+** Example:
++
+We can refer to self through the applicationAsVariable template context name.
++
+[source,yaml]
+----
+    templateContext:
+        - name: applicationAsVariable
+          expression: "#self"
+----
+
+
 
 * `copy`: It can be used to copy a binary file. In this case the template file used as binary, no templating is performed.
 
 * `permission`: It can be used to add execution permission to files. For example bash files.
+
+** We use the POSIX permission pattern. Use this pattern `rwxrwxrwx` (read,write,execute).
+    This contains 3 permission type in this order:
+*** owner
+*** group
+*** other
+
+** We add the global permission first if it is present and if the template have a local permission we use that.
+
+** Example
+
++
+[source,yaml]
+----
+  - name: judo.sh
+    pathExpression: "'judo.sh'"
+    templateName: judo.sh.hbs
+    permission: rwxrwx---
+    actorTypeBased: false
+----
 
 * `exclude`: This parameter can be used in an override to exclude the given template from a generation. With this parameter only the `name` is effective.
 
@@ -99,7 +136,7 @@ https://github.com/BlackBeltTechnology/judo-meta-esm/tree/develop/generator-mave
 
 We don't register helpers manually. To register a java helper class use the `@TemplateHelper` annotation.
 
-IMPORTANT: The Java class method must be static.
+IMPORTANT: The Java class methods must be static.
 
 If you inherit your helper class from the `StaticMethodValueResolver` class, you can refer to its methods using dot notation.
 
@@ -111,13 +148,13 @@ The self mean different thinks in the springEL and Handlebars depend on the YAML
 
 - If actorTypeBased is enabled, then #self refers to the actor.
 
-- If we have a `factoryExpression`, then #self refers to the result of the factory expression.
+- If we have a `factoryExpression`, then the self is the current iterated element of collection.
 
-- If we do not have a `factoryExpression`, then #self refers to the model.
+- If we don't have a `factoryExpression` and it is not actorTypeBased, then #self refers to the model.
 
 === How to reach templateParameters
 
-The problem with the templateParameters is that it is not static. This can cause issues with parallel building. To void
+They are not static and have to be accessible to static helper methods which are called from parallel processes. This can cause issues with parallel building. To void
 this issue the `@ContextAccessor` annotation and a `bindContext` method.
 
 Example:
@@ -151,7 +188,24 @@ This only need if we used the templateParameters in a java Helper.
 === Checksum generation
 A checksum is a value calculated from data to detect errors during transmission or storage. It ensures data integrity and any mismatches indicate errors in the data.
 
-* The checksum generation is located in the generator-maven-plugin.
+* The checksum generation is a goal of the generator-maven-plugin.
+
+Example:
+
+[source,xml]
+----
+                    <execution>
+                        <id>execute-ui-checksum-from-file</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>checksum</goal>
+                        </goals>
+                        <configuration>
+                            <ui>${basedir}/src/test/resources/MultiPrincipalTest-ui.model</ui>
+                            <destination>${basedir}/target/test-classes/ui/file</destination>
+                        </configuration>
+                    </execution>
+----
 
 * The [modelName]ProjectGenerateMojo is responsible for generating the files, while the [modelName]ProjectCalculateChecksumMojo is responsible for generating checksums for the files.
 
