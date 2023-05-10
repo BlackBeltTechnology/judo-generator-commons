@@ -23,7 +23,7 @@ For example in the judo-meta-esm :
 
     EsmGenerator.java -> Process of parameterization.
 
-    EsmGeneratorParamete.java -> This contains the model as a parameter, the generatorContext, the DirectoryResolvers etc.
+    EsmGeneratorParameter.java -> This contains the model as a parameter, the generatorContext, the DirectoryResolvers etc.
 
 === Description of a project
 
