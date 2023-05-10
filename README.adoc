@@ -56,12 +56,18 @@ templates:
 
 * `name`: This is like an id for the template. Based on this, we can override the template later.
 
-* `pathExpression`: This specifies where the generated file is located and under what name it will be generated. We use spring expression language (https://docs.spring.io/spring-framework/docs/3.0.x/reference/expressions.html[springEL]), because handlebars only support string output.
+* `pathExpression`: This specifies where the generated file is located and under what name it will be generated.
+
+===== Expressions
+
+We use spring expression language (https://docs.spring.io/spring-framework/docs/3.0.x/reference/expressions.html[springEL]), because handlebars only support string output. Every expression in yaml is SpringEL.
+
+For example : templateName, actoryExpression, condtionExpresison and templateContext use it.
 
 * `templateName`: The location of the handlebars file relative to the template root.
 
 * `actorTypeBased`: When actorTypeBased template used, the template called for all actor types and the actorType variable is defined.
-    ** We can override the name of the property. The ui meta model use applicationBased.
+    ** We can override the name of the property.
     +
     For example we can override in https://github.com/BlackBeltTechnology/judo-meta-ui/blob/develop/generator-engine/src/main/java/hu/blackbelt/judo/meta/ui/generator/engine/UiGeneratorTemplateMixin.java[this] way.
     We use this class for the generationContext builder.
@@ -82,7 +88,9 @@ Not in the example :
 
 * `factoryExpression`: Factory expression is used to create files. It returns a list of objects which are used as root context for the given handlebar template.
 
-* `templateContext`: Template context is used to put expression result to template variable. We can refer to the expression through the template context name. (Not used often because of the helpers)
+* `condtionExpresison`: With the help of the ConditionExpression, we can exclude cases that we do not want to generate if the condition is false. This should return a Boolean Spring expression.
+
+* `templateContext`: Template context is used to put expression result to template variable. We can refer to the expression through the template context name. (Not used often because of the helpers).
 ** Example:
 +
 We can refer to self through the applicationAsVariable template context name.
