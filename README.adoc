@@ -88,7 +88,7 @@ Not in the example :
 
 * `factoryExpression`: Factory expression is used to create files. It returns a list of objects which are used as root context for the given handlebar template.
 
-* `condtionExpresison`: With the help of the ConditionExpression, we can exclude cases that we do not want to generate if the condition is false. This should return a Boolean Spring expression.
+* `conditionExpresison`: With the help of the ConditionExpression, we can exclude cases that we do not want to generate if the condition is false. This should return a Boolean Spring expression.
 
 * `templateContext`: Template context is used to put expression result to template variable. We can refer to the expression through the template context name. (Not used often because of the helpers).
 ** Example:
