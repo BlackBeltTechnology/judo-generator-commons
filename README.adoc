@@ -15,7 +15,7 @@ There are 3 modules in these projects, which are related to the generator common
 - generator-maven-project
 - generator-maven-plugin-test
 
-The `generator-engine` teaches the generator commons how to release the items. This bind the meta model to the generator.
+The `generator-engine` module configures the process of generation in generator commons. This bind the meta model to the generator.
 Models are transformed into template parameters in this project.
 
 
@@ -27,10 +27,10 @@ For example in the judo-meta-esm :
 
 === Description of a project
 
-The <project type>.yaml file describes what template is used for that and control which parameters are passed and the model can control HOW the templates can be used.
-Each generator-engine project has test directory with test project. This test project provides an example of how a `test-project.yaml` description looks like.
+The <project type>.yaml file describes which template is used and which parameters are passed, while the model controls how the templates can be used.
+Each generator-engine project has test directory with test module. This test project provides an example of how a `test-project.yaml` description looks like.
 
-Typically struct is :
+Typically structure is :
 
 [source,yaml]
 ----
@@ -68,13 +68,12 @@ For example : templateName, factoryExpression, condtionExpresison and templateCo
 
 * `actorTypeBased`: When actorTypeBased template used, the template called for all actor types and the actorType variable is defined.
     ** We can override the name of the property.
-    +
-    For example we can override in https://github.com/BlackBeltTechnology/judo-meta-ui/blob/develop/generator-engine/src/main/java/hu/blackbelt/judo/meta/ui/generator/engine/UiGeneratorTemplateMixin.java[this] way.
+    For example, as shown in https://github.com/BlackBeltTechnology/judo-meta-ui/blob/develop/generator-engine/src/main/java/hu/blackbelt/judo/meta/ui/generator/engine/UiGeneratorTemplateMixin.java[judo-meta-ui: UiGeneratorTemplateMixin.java].
     We use this class for the generationContext builder.
 
 [source,java]
 ----
-//if the actorTypeBased is true, we need to defined in the EsmGeneratorParameter
+//the following parameters must be defined in EsmGeneratorParameter
 
     @Builder.Default
     Predicate<ActorType> actorTypePredicate = a -> true;
@@ -137,32 +136,31 @@ The class contains a global permission parameter that adds a global permission t
 
 === Generator Maven Project
 
-https://github.com/BlackBeltTechnology/judo-meta-esm/tree/develop/generator-maven-plugin#readme[This] link contains the description of the generator maven plugin.
+The description of the https://github.com/BlackBeltTechnology/judo-meta-esm/tree/develop/generator-maven-plugin#readme[generator maven plugin] contains the information.
 
 === Helper registration
 
 We don't register helpers manually. To register a java helper class use the `@TemplateHelper` annotation.
 
-IMPORTANT: The Java class methods must be public static.
+IMPORTANT: The Helper methods must be public static.
 
-If you inherit your helper class from the `StaticMethodValueResolver` class, you can refer to its methods using dot notation.
+If you inherit your helper class from the `StaticMethodValueResolver` class, you can refer to its methods using dot notation in templates.
 
 The helpers are available in springEL too with # prefix.
 
 === Self meaning in different situations
 
-The self mean different thinks in the springEL and Handlebars depend on the YAML properties:
+Self has different meanings in springEL and Handlebars depending on YAML properties:
 
 - If actorTypeBased is enabled, then #self refers to the actor.
 
-- If we have a `factoryExpression`, then the self is the current iterated element of collection.
+- If it's in context of a factoryExpression self is the current iterated element of collection.
 
-- If we don't have a `factoryExpression` and it is not actorTypeBased, then #self refers to the model.
+- If it's not in context of a factoryExpression and actorTypeBased is disabled, then self refers to the model.
 
-=== How to reach templateParameters
+=== How to access template parameters in helper classes
 
-They are not static and have to be accessible to static helper methods which are called from parallel processes. This can cause issues with parallel building. To void
-this issue the `@ContextAccessor` annotation and a `bindContext` method.
+They are not static and have to be accessible to static helper methods which are called from parallel processes. This can cause issues with parallel building. To avoid issues during parallel building, use the `@ContextAccessor` annotation on the variable helper class and the `bindContext`` method
 
 Example:
 [source,java]
@@ -190,12 +188,12 @@ public class StoredVariableHelper extends StaticMethodValueResolver {
 
 ----
 
-This only need if we used the templateParameters in a java Helper.
+This is only needed if templateParameters is (or "template parameters are) used in Java helpers.
 
 === Checksum generation
-A checksum is a value calculated from data to detect errors during transmission or storage. It ensures data integrity and any mismatches indicate errors in the data.
+A checksum is a value calculated from data to detect errors during storage. It ensures data integrity and any mismatches indicate errors in the data.
 
-* The checksum generation is a goal of the generator-maven-plugin.
+* Checksums are generated by generator-maven-plugin.
 
 Example:
 
@@ -221,11 +219,11 @@ Example:
 
 === Generator ignore file
 
-IMPORTANT: Sometimes a developer needs to replace generated file with custom developed file. On that case the generator has to ignore the given file to keep the edited version. To achieve this `.generator-ignore` file can be used. In this case, every unexpected behavior is the responsibility of the developer.
+IMPORTANT: Sometimes a developer needs to replace generated file with custom developed file. In that case the generator has to ignore the given file to keep the edited version. To achieve this `.generator-ignore` file can be used. In this case, every unexpected behavior to the overridden/custom file is the responsibility of the developer.
 
 We use GLOB format, so the usage is same as .gitignore.
 
-Here is some example :
+Here are some example :
 
 * Ignore files with a specific extension: *.log, *.txt, *.docx
 
