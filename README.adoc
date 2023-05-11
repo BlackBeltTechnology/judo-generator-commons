@@ -62,7 +62,7 @@ templates:
 
 We use spring expression language (https://docs.spring.io/spring-framework/docs/3.0.x/reference/expressions.html[springEL]), because handlebars only support string output. Every expression in yaml is SpringEL.
 
-For example : templateName, actoryExpression, condtionExpresison and templateContext use it.
+For example : templateName, factoryExpression, condtionExpresison and templateContext use it.
 
 * `templateName`: The location of the handlebars file relative to the template root.
 
