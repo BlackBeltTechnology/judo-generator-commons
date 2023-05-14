@@ -25,6 +25,7 @@ import hu.blackbelt.judo.generator.commons.annotations.TemplateHelper;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class TemplateHelperFinder {
 
 
@@ -61,7 +63,8 @@ public class TemplateHelperFinder {
     private static Optional<ClassInfo> findContextAccessorClassInfo(ClassLoader...classLoaders) throws IOException {
         ClassInfoList classInfos = getAnnotatedTypes(ContextAccessor.class, classLoaders);
         if (classInfos.size() > 1) {
-            throw new IllegalArgumentException("Multiple instance of class annotated with @ContextAccessor found");
+            throw new IllegalArgumentException("Multiple instance of class annotated with @ContextAccessor found: " +
+                    classInfos.stream().map(c -> c.getName()).collect(Collectors.joining(", ")));
         }
         if (classInfos.size() == 1) {
             return Optional.of(classInfos.get(0));
