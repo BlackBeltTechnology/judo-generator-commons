@@ -24,73 +24,87 @@ import com.github.jknack.handlebars.ValueResolver;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
+@Slf4j
 public abstract class StaticMethodValueResolver implements ValueResolver {
 
-    private CacheLoader<CacheKey, AtomicReference<Method>> loader = new CacheLoader<CacheKey, AtomicReference<Method>>() {
+    private CacheLoader<String, Collection<Method>> methodListLoaderByName = new CacheLoader<String, Collection<Method>>() {
         @Override
-        public AtomicReference<Method> load(CacheKey key) {
-            return getMethodForContext(key.context, key.name);
+        public Collection<Method> load(String key) {
+            return getMethodListByName(key);
         }
     };
 
-    private LoadingCache<CacheKey, AtomicReference<Method>> cache = CacheBuilder.newBuilder().build(loader);
-
-    static private class CacheKey {
-        Object context;
-        String name;
-
-        public CacheKey(Object context, String name) {
-            this.context = context;
-            this.name = name;
-        }
-    }
-
+    private LoadingCache<String, Collection<Method>> methodListCacheByContextAndName = CacheBuilder.newBuilder().build(methodListLoaderByName);
 
     @Override
     public Object resolve(Object context, String name) {
-        if (context == null) {
-            return UNRESOLVED;
-        }
         try {
-            AtomicReference<Method> method = cache.get(new CacheKey(context, name));
+            AtomicReference<Method> method = getMethodByContextClassByName(context, name);
             if (method.get() != null) {
-                return method.get().invoke(null, context);
+                if (context == null || method.get().getParameterCount() == 0) {
+                    return method.get().invoke(null);
+                } else if (method.get().getParameterCount() == 1) {
+                    return method.get().invoke(null, context);
+                }
             }
-        } catch (ExecutionException | IllegalAccessException | InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
         return UNRESOLVED;
 
     }
 
-    private AtomicReference<Method> getMethodForContext(Object context, String name) {
+    private Collection<Method> getMethodListByName(String name) {
         Class methodClazz = this.getClass();
+        Collection<Method> potentialMethods = Arrays.stream(methodClazz.getDeclaredMethods())
+                .filter(m -> m.getName().equals(name))
+                .filter(m -> Modifier.isPublic(m.getModifiers()))
+                .filter(m -> Modifier.isStatic(m.getModifiers())).collect(Collectors.toList());
+        return potentialMethods;
+    }
+
+    private AtomicReference<Method> getMethodByContextClassByName(Object context, String name) {
 
         AtomicReference<Method> method = new AtomicReference<>(null);
-        AtomicReference<Class> contextClass = new AtomicReference<>(context.getClass());
-
-        while (method.get() == null && contextClass.get() != null) {
-            Arrays.stream(methodClazz.getDeclaredMethods())
-                    .filter(m -> m.getName().equals(name))
-                    .filter(m -> Modifier.isPublic(m.getModifiers()))
-                    .filter(m -> Modifier.isStatic(m.getModifiers()))
-                    .filter(m -> m.getParameterCount() == 1)
-                    .filter(m -> m.getParameters()[0].getType().isAssignableFrom(contextClass.get()))
-                    .findFirst()
-                    .ifPresentOrElse(m -> method.set(m), () -> contextClass.set(contextClass.get().getSuperclass()));
+        AtomicReference<Class> contextClassRef = new AtomicReference<>(context.getClass());
+        Collection<Method> methods = null;
+        try {
+            methods = methodListCacheByContextAndName.get(name);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
         }
 
+        while (method.get() == null && contextClassRef.get() != null) {
+            methods.stream()
+                    .filter(m -> (m.getParameterCount() == 0 || m.getParameterCount() == 1 && m.getParameters()[0].getType().isAssignableFrom(contextClassRef.get())))
+                    .findFirst()
+                    .ifPresentOrElse(m -> method.set(m), () ->
+                            contextClassRef.set(contextClassRef.get().getSuperclass())
+                    );
+        }
+
+        if (!context.getClass().getName().equals("java.lang.Object")
+            && !(context instanceof Map)
+                && method.get() == null
+                && methods.stream().anyMatch(m -> m.getName().equals(name))) {
+            for (Method methodByName : methods.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList())) {
+                String methodParameters = " Method parameter(s): \n\t" + Arrays.stream(methodByName.getParameters()).sequential()
+                        .map(m -> m.getName() + ": " + m.getType().getName())
+                        .collect(Collectors.joining("\n\t"));
+                log.warn("Method: " + name + " presented, but the argument number and/or type does not match. \nContext type: " + context.getClass().getName() +
+                        " Value: " + (context == null ? "null" : context.toString()) + methodParameters);
+            }
+        }
         return method;
     }
 
