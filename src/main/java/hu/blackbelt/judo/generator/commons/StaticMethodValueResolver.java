@@ -46,21 +46,9 @@ public abstract class StaticMethodValueResolver implements ValueResolver {
 
     private LoadingCache<String, Collection<Method>> methodListCacheByContextAndName = CacheBuilder.newBuilder().build(methodListLoaderByName);
 
-    static private class CacheKey {
-        Class contextClass;
-        String name;
-
-        public CacheKey(Class contextClass, String name) {
-            this.contextClass = contextClass;
-            this.name = name;
-        }
-    }
-
-
     @Override
     public Object resolve(Object context, String name) {
         try {
-            // AtomicReference<Method> method = methodCacheByContextClassAndName.get(new CacheKey(context.getClass(), name));
             AtomicReference<Method> method = getMethodByContextClassAanName(context, name);
             if (method.get() != null) {
                 if (context == null || method.get().getParameterCount() == 0) {
