@@ -37,11 +37,15 @@ import java.util.stream.Collectors;
 public class TemplateHelperFinder {
 
 
-    private static ClassInfoList getAnnotatedTypes(Class annotation, ClassLoader...classLoaders) {
-        return new ClassGraph()
+    private static ClassInfoList getAnnotatedTypes(Class annotation, Collection<String> acceptedPackages, ClassLoader...classLoaders) {
+        ClassGraph classGraph =  new ClassGraph()
                 .enableAnnotationInfo()
-                .overrideClassLoaders(getClassLooaders(classLoaders))
-                .scan()
+                .overrideClassLoaders(getClassLooaders(classLoaders));
+
+        if (acceptedPackages != null && acceptedPackages.size() > 0) {
+            classGraph.acceptPackages(acceptedPackages.stream().map(s -> s.trim()).collect(Collectors.toList()).toArray(new String[acceptedPackages.size()]));
+        }
+        return   classGraph.scan()
                 .getClassesWithAnnotation(annotation.getName());
     }
 
@@ -52,16 +56,24 @@ public class TemplateHelperFinder {
         }
         return classLoadersEff;
     }
+    public static Collection<String> collectHelpers(Collection<String> acceptedPackages, ClassLoader...classLoaders) throws IOException {
+        return getAnnotatedTypes(TemplateHelper.class, acceptedPackages, classLoaders).stream().map(c -> c.getName()).collect(Collectors.toSet());
+    }
+
     public static Collection<String> collectHelpers(ClassLoader...classLoaders) throws IOException {
-        return getAnnotatedTypes(TemplateHelper.class, classLoaders).stream().map(c -> c.getName()).collect(Collectors.toSet());
+        return getAnnotatedTypes(TemplateHelper.class, null, classLoaders).stream().map(c -> c.getName()).collect(Collectors.toSet());
+    }
+
+    public static Collection<Class> collectHelpersAsClass(Collection<String> acceptedPackages, ClassLoader...classLoaders) throws IOException {
+        return getAnnotatedTypes(TemplateHelper.class, acceptedPackages, classLoaders).stream().map(c -> c.loadClass()).collect(Collectors.toSet());
     }
 
     public static Collection<Class> collectHelpersAsClass(ClassLoader...classLoaders) throws IOException {
-        return getAnnotatedTypes(TemplateHelper.class, classLoaders).stream().map(c -> c.loadClass()).collect(Collectors.toSet());
+        return getAnnotatedTypes(TemplateHelper.class, null, classLoaders).stream().map(c -> c.loadClass()).collect(Collectors.toSet());
     }
 
-    private static Optional<ClassInfo> findContextAccessorClassInfo(ClassLoader...classLoaders) throws IOException {
-        ClassInfoList classInfos = getAnnotatedTypes(ContextAccessor.class, classLoaders);
+    private static Optional<ClassInfo> findContextAccessorClassInfo(Collection<String> acceptedPackages, ClassLoader...classLoaders) throws IOException {
+        ClassInfoList classInfos = getAnnotatedTypes(ContextAccessor.class, acceptedPackages, classLoaders);
         if (classInfos.size() > 1) {
             throw new IllegalArgumentException("Multiple instance of class annotated with @ContextAccessor found: " +
                     classInfos.stream().map(c -> c.getName()).collect(Collectors.joining(", ")));
@@ -72,13 +84,20 @@ public class TemplateHelperFinder {
         return Optional.empty();
     }
 
+    public static Optional<Class> findContextAccessorAsClass(Collection<String> acceptedPackages, ClassLoader...classLoaders) throws IOException {
+        return findContextAccessorClassInfo(acceptedPackages, classLoaders).map(o -> o.loadClass());
+    }
+
     public static Optional<Class> findContextAccessorAsClass(ClassLoader...classLoaders) throws IOException {
-        return findContextAccessorClassInfo(classLoaders).map(o -> o.loadClass());
+        return findContextAccessorClassInfo(null, classLoaders).map(o -> o.loadClass());
+    }
+
+    public static Optional<String> findContextAccessor(Collection<String> acceptedPackages, ClassLoader...classLoaders) throws IOException {
+        return findContextAccessorClassInfo(acceptedPackages, classLoaders).map(o -> o.getName());
     }
 
     public static Optional<String> findContextAccessor(ClassLoader...classLoaders) throws IOException {
-        return findContextAccessorClassInfo(classLoaders).map(o -> o.getName());
+        return findContextAccessorClassInfo(null, classLoaders).map(o -> o.getName());
     }
-
 
 }

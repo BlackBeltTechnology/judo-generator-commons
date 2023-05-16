@@ -52,6 +52,9 @@ public class StringHelper extends StaticMethodValueResolver {
     }
 
     public static String decorateWithAsterisks(String text) {
+        if (text == null) {
+            return "";
+        }
         return text.replace("\n", "\n * ");
     }
 
