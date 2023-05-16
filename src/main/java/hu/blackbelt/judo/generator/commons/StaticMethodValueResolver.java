@@ -49,7 +49,7 @@ public abstract class StaticMethodValueResolver implements ValueResolver {
     @Override
     public Object resolve(Object context, String name) {
         try {
-            AtomicReference<Method> method = getMethodByContextClassAanName(context, name);
+            AtomicReference<Method> method = getMethodByContextClassByName(context, name);
             if (method.get() != null) {
                 if (context == null || method.get().getParameterCount() == 0) {
                     return method.get().invoke(null);
@@ -73,7 +73,7 @@ public abstract class StaticMethodValueResolver implements ValueResolver {
         return potentialMethods;
     }
 
-    private AtomicReference<Method> getMethodByContextClassAanName(Object context, String name) {
+    private AtomicReference<Method> getMethodByContextClassByName(Object context, String name) {
 
         AtomicReference<Method> method = new AtomicReference<>(null);
         AtomicReference<Class> contextClassRef = new AtomicReference<>(context.getClass());
@@ -96,7 +96,7 @@ public abstract class StaticMethodValueResolver implements ValueResolver {
         if (!context.getClass().getName().equals("java.lang.Object")
             && !(context instanceof Map)
                 && method.get() == null
-                && methods.stream().filter(m -> m.getName().equals(name)).findFirst().isPresent()) {
+                && methods.stream().anyMatch(m -> m.getName().equals(name))) {
             for (Method methodByName : methods.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList())) {
                 String methodParameters = " Method parameter(s): \n\t" + Arrays.stream(methodByName.getParameters()).sequential()
                         .map(m -> m.getName() + ": " + m.getType().getName())
