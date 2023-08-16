@@ -46,7 +46,7 @@
         <!--suppress UnresolvedMavenProperty -->
         <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
 
-        <epsilon-runtime-version>1.5.1.20230815_121724_da914fa9_develop</epsilon-runtime-version>
+        <epsilon-runtime-version>1.5.1.20230816_013040_d3d50eb1_develop</epsilon-runtime-version>
 
         <!-- Code Quality-->
         <sonar-maven-plugin-version>3.9.1.2184</sonar-maven-plugin-version>
