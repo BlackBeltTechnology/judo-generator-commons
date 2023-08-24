@@ -21,7 +21,7 @@ package hu.blackbelt.judo.generator.commons;
  */
 
 import com.google.common.collect.ImmutableMap;
-import hu.blackbelt.epsilon.runtime.execution.api.Log;
+import org.slf4j.Logger;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
@@ -49,7 +49,7 @@ public final class GeneratorParameter<T> {
     @NonNull
     Supplier<File> targetDirectoryResolver;
 
-    Log log;
+    Logger log;
 
     @Builder.Default
     Supplier<Map<String, ?>> extraContextVariables = () -> ImmutableMap.of();

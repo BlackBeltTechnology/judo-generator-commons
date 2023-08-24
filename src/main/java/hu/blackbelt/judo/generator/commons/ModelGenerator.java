@@ -25,8 +25,7 @@ import com.github.jknack.handlebars.ValueResolver;
 import com.github.jknack.handlebars.io.URLTemplateLoader;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
-import hu.blackbelt.epsilon.runtime.execution.api.Log;
-import hu.blackbelt.epsilon.runtime.execution.impl.BufferedSlf4jLogger;
+import org.slf4j.Logger;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -74,7 +73,7 @@ public class ModelGenerator<M> {
             final TemplateEvaulator templateEvaulator,
             final GeneratorTemplate generatorTemplate,
             final Context.Builder contextBuilder,
-            final Log log) {
+            final Logger log) {
 
 
         GeneratedFile generatedFile = new GeneratedFile();
@@ -142,12 +141,12 @@ public class ModelGenerator<M> {
 
     public static <D> Consumer<Map.Entry<D, Collection<GeneratedFile>>> getDirectoryWriterForActor(
             Function<D, File> actorTypeTargetDirectoryResolver,
-            Function<D, String> actorTypeNameResolver,  boolean validateChecksum, Log log) {
+            Function<D, String> actorTypeNameResolver,  boolean validateChecksum, Logger log) {
         return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()), validateChecksum);
 
     }
 
-    public static Consumer<Collection<GeneratedFile>> getDirectoryWriter(Supplier<File> targetDirectoryResolver, boolean validateChecksum, Log log) {
+    public static Consumer<Collection<GeneratedFile>> getDirectoryWriter(Supplier<File> targetDirectoryResolver, boolean validateChecksum, Logger log) {
         return e -> writeDirectory(e, targetDirectoryResolver.get(), GENERATED_FILES, validateChecksum);
     }
 
@@ -322,10 +321,10 @@ public class ModelGenerator<M> {
 
     public static <T> void generateToDirectory(GeneratorParameter<T> parameter) throws Exception {
         final AtomicBoolean loggerToBeClosed = new AtomicBoolean(false);
-        Log log = Objects.requireNonNullElseGet(parameter.log,
+        Logger log = Objects.requireNonNullElseGet(parameter.log,
                                                 () -> {
                                                     loggerToBeClosed.set(true);
-                                                    return new BufferedSlf4jLogger(ModelGenerator.log);
+                                                    return ModelGenerator.log;
                                                 });
 
         try {
@@ -343,7 +342,14 @@ public class ModelGenerator<M> {
             getDirectoryWriter(parameter.targetDirectoryResolver, parameter.isValidateChecksum(), log).accept(result.generated);
         } finally {
             if (loggerToBeClosed.get()) {
-                log.close();
+                try {
+                    if (log instanceof Closeable) {
+                        ((Closeable) log).close();
+                    }
+                } catch (Exception e) {
+                    //noinspection ThrowFromFinallyBlock
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
