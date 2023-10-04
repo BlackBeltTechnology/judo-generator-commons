@@ -437,7 +437,7 @@ public class ModelGenerator<M> {
             GeneratorModel model = GeneratorModel.loadYamlURL(entry.getKey(),
                     UriHelper.calculateRelativeURI(entry.getValue(), args.descriptorName + YAML).normalize().toURL(),
                     args);
-            if (entry == root) {
+            if (entry == root || generatorModel == null) {
                 generatorModel = model;
             } else {
                 if (model != null && generatorModel != null) {
