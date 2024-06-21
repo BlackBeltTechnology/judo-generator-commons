@@ -154,6 +154,8 @@ public class ModelGenerator<M> {
         Collection<GeneratedFile> generatedFilesFilteredWithCondition = generatedFiles.stream().filter(f -> f.isCondition()).collect(Collectors.toList());
 
         GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
+        ChecksumIgnore checksumIgnore = new ChecksumIgnore(targetDirectory.toPath());
+
         Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(generatedFilesFilteredWithCondition);
         Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
         Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
@@ -176,6 +178,7 @@ public class ModelGenerator<M> {
             // Check files where filesystem checksum does not match with the last generated ones and it's not ignored.
             List<GeneratorFileEntry> checksumMismatchInFilesystem = filesystemFileEntryCollection.stream()
                     .filter(f -> savedFileEntryMap.containsKey(f.getPath()))
+                    .filter(f -> !checksumIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
                     .filter(f -> !f.getChecksum().equals(savedFileEntryMap.get(f.getPath()).getChecksum()))
                     .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
                     .collect(Collectors.toList());
@@ -195,6 +198,7 @@ public class ModelGenerator<M> {
                         !savedFileEntryMap.containsKey(f.getPath()) ||
                                 !(savedFileEntryMap.containsKey(f.getPath())
                                         && savedFileEntryMap.get(f.getPath()).getChecksum().equals(f.getChecksum())))
+                .filter(f -> !checksumIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
                 .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
                 .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
 
