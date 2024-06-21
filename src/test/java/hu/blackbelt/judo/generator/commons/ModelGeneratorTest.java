@@ -126,6 +126,18 @@ public class ModelGeneratorTest {
     }
 
     @Test
+    void testChecksumIgnore() throws IOException {
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
+
+        Path checksumIgnoreFile = absolutePathFor(".generator-checksum-ignore");
+        Path file1 = absolutePathFor("level1", "file1");
+
+        Files.write(file1, "level1/file1Modified".getBytes(StandardCharsets.UTF_8));
+        Files.write(checksumIgnoreFile, "level1/file1".getBytes(StandardCharsets.UTF_8));
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
+    }
+
+    @Test
     void testGeneratedFileChanges() throws IOException {
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
