@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -155,7 +154,7 @@ public class ModelGeneratorTest {
         Files.write(checksumIgnoreFile, "level1/file1".getBytes(StandardCharsets.UTF_8));
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
     }
-    
+
     @Test
     void testGitignoreSynchronizerWithoutGitignore() throws IOException {
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
@@ -168,7 +167,7 @@ public class ModelGeneratorTest {
         Files.write(checksumIgnoreFile, "level1/file1".getBytes(StandardCharsets.UTF_8));
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
-        ModelGenerator.synchronizeGeneratorIgnoredFileWithGitIgnoreInDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
 
         assertEquals("# JUDO GENERATOR BLOCK START|level1/file1|level1/file2|level1/level2/file3|# JUDO GENERATOR BLOCK END", Files.readAllLines(gitIgnore).stream().collect(Collectors.joining("|")));
 
@@ -187,7 +186,7 @@ public class ModelGeneratorTest {
         Files.write(checksumIgnoreFile, "level1/file1".getBytes(StandardCharsets.UTF_8));
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
-        ModelGenerator.synchronizeGeneratorIgnoredFileWithGitIgnoreInDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
 
         assertEquals("SOME OTHER FILE|# JUDO GENERATOR BLOCK START|level1/file1|level1/file2|level1/level2/file3|# JUDO GENERATOR BLOCK END", Files.readAllLines(gitIgnore).stream().collect(Collectors.joining("|")));
 
@@ -207,7 +206,7 @@ public class ModelGeneratorTest {
         Files.write(checksumIgnoreFile, "level1/file1".getBytes(StandardCharsets.UTF_8));
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
-        ModelGenerator.synchronizeGeneratorIgnoredFileWithGitIgnoreInDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
+        ModelGenerator.synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES);
 
         assertEquals("SOME OTHER FILE|# JUDO GENERATOR BLOCK START|level1/file1|level1/file2|level1/level2/file3|# JUDO GENERATOR BLOCK END|after|another|lines", Files.readAllLines(gitIgnore).stream().collect(Collectors.joining("|")));
 

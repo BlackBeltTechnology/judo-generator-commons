@@ -210,17 +210,18 @@ public class ModelGenerator<M> {
     }
 
 
-    public static <D> Consumer<D> getDirectoryChecksumCleanerForActor(
+    public static <D> Consumer<D> getDirectoryChecksumRemoverForActor(
             Function<D, File> actorTypeTargetDirectoryResolver,
             Function<D, String> actorTypeNameResolver) {
         return e -> deleteExitingFileInDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
 
     }
 
-    public static Runnable getDirectoryChecksumCleaner(Supplier<File> targetDirectoryResolver) {
+    public static Runnable getDirectoryChecksumRemover(Supplier<File> targetDirectoryResolver) {
         return () -> deleteExitingFileInDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
     }
 
+    /*
     public static <D> Consumer<D> getDirectoryCleanerFromChecksumCalculatorForActor(
             Function<D, File> actorTypeTargetDirectoryResolver,
             Function<D, String> actorTypeNameResolver) {
@@ -231,17 +232,17 @@ public class ModelGenerator<M> {
     public static Runnable getDirectoryCleanerFromChecksumCalculator(Supplier<File> targetDirectoryResolver) {
         return () -> cleanGeneratedFromChecksumInDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
     }
+    */
 
-
-    public static <D> Consumer<D> getGitIgnoreSynchronizerForActor(
+    public static <D> Consumer<D> getDirectoryGitignoreSynchronizerForActor(
             Function<D, File> actorTypeTargetDirectoryResolver,
             Function<D, String> actorTypeNameResolver) {
-        return e -> cleanGeneratedFromChecksumInDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
+        return e -> synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
 
     }
 
-    public static Runnable getDirectoryGitIgnoreSynchronizer(Supplier<File> targetDirectoryResolver) {
-        return () -> synchronizeGeneratorIgnoredFileWithGitIgnoreInDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
+    public static Runnable getDirectoryGitignoreSynchronizer(Supplier<File> targetDirectoryResolver) {
+        return () -> synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
     }
 
 
@@ -272,7 +273,7 @@ public class ModelGenerator<M> {
                 });
     }
 
-    public static void synchronizeGeneratorIgnoredFileWithGitIgnoreInDirectory(File targetDirectory, String generatorFilesName) {
+    public static void synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(File targetDirectory, String generatorFilesName) {
         GitIgnoreSynchronizer gitIgnoreSynchronizer = new GitIgnoreSynchronizer(targetDirectory.toPath());
         gitIgnoreSynchronizer.addGeneratedFiles(readGeneratedFiles(targetDirectory, generatorFilesName));
     }
@@ -423,18 +424,18 @@ public class ModelGenerator<M> {
 
     public static void resetChecksums(GeneratorParameter parameter) throws Exception {
 
-        getDirectoryChecksumCleaner(parameter.targetDirectoryResolver);
+        getDirectoryChecksumRemover(parameter.targetDirectoryResolver);
 
-        getDirectoryChecksumCleanerForActor(
+        getDirectoryChecksumRemoverForActor(
                 parameter.getDiscriminatorTargetDirectoryResolver(),
                 parameter.getDiscriminatorTargetNameResolver());
     }
 
     public static <T> void resetChecksumsInDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) throws Exception {
-        discriminators.forEach(getDirectoryChecksumCleanerForActor(
+        discriminators.forEach(getDirectoryChecksumRemoverForActor(
                 parameter.getDiscriminatorTargetDirectoryResolver(),
                 parameter.getDiscriminatorTargetNameResolver()));
-        getDirectoryChecksumCleaner(parameter.targetDirectoryResolver).run();
+        getDirectoryChecksumRemover(parameter.targetDirectoryResolver).run();
     }
 
     public static void cleanGeneratedFromChecksum(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
@@ -443,18 +444,38 @@ public class ModelGenerator<M> {
 
     public static void cleanGeneratedFromChecksum(GeneratorParameter parameter) throws Exception {
 
-        getDirectoryChecksumCleaner(parameter.targetDirectoryResolver);
+        getDirectoryChecksumRemover(parameter.targetDirectoryResolver);
 
-        getDirectoryChecksumCleanerForActor(
+        getDirectoryChecksumRemoverForActor(
                 parameter.getDiscriminatorTargetDirectoryResolver(),
                 parameter.getDiscriminatorTargetNameResolver());
     }
 
     public static <T> void cleanGeneratedFromChecksumInDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) throws Exception {
-        discriminators.forEach(getDirectoryChecksumCleanerForActor(
+        discriminators.forEach(getDirectoryChecksumRemoverForActor(
                 parameter.getDiscriminatorTargetDirectoryResolver(),
                 parameter.getDiscriminatorTargetNameResolver()));
-        getDirectoryChecksumCleaner(parameter.targetDirectoryResolver).run();
+        getDirectoryChecksumRemover(parameter.targetDirectoryResolver).run();
+    }
+
+    public static void synchronizeGitignore(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
+        synchronizeGitignore(builder.build());
+    }
+
+    public static void synchronizeGitignore(GeneratorParameter parameter) throws Exception {
+
+        getDirectoryChecksumRemover(parameter.targetDirectoryResolver);
+
+        getDirectoryChecksumRemoverForActor(
+                parameter.getDiscriminatorTargetDirectoryResolver(),
+                parameter.getDiscriminatorTargetNameResolver());
+    }
+
+    public static <T> void synchronizeGitignoreInDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) throws Exception {
+        discriminators.forEach(getDirectoryGitignoreSynchronizerForActor(
+                parameter.getDiscriminatorTargetDirectoryResolver(),
+                parameter.getDiscriminatorTargetNameResolver()));
+        getDirectoryGitignoreSynchronizer(parameter.targetDirectoryResolver).run();
     }
 
     public static <T> void recalculateChecksumToDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) {
