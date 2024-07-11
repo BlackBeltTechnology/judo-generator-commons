@@ -210,6 +210,41 @@ public class ModelGenerator<M> {
     }
 
 
+    public static <D> Consumer<D> getDirectoryChecksumCleanerForActor(
+            Function<D, File> actorTypeTargetDirectoryResolver,
+            Function<D, String> actorTypeNameResolver) {
+        return e -> deleteExitingFileInDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
+
+    }
+
+    public static Runnable getDirectoryChecksumCleaner(Supplier<File> targetDirectoryResolver) {
+        return () -> deleteExitingFileInDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
+    }
+
+    public static <D> Consumer<D> getDirectoryCleanerFromChecksumCalculatorForActor(
+            Function<D, File> actorTypeTargetDirectoryResolver,
+            Function<D, String> actorTypeNameResolver) {
+        return e -> cleanGeneratedFromChecksumInDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
+
+    }
+
+    public static Runnable getDirectoryCleanerFromChecksumCalculator(Supplier<File> targetDirectoryResolver) {
+        return () -> cleanGeneratedFromChecksumInDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
+    }
+
+
+    public static <D> Consumer<D> getGitIgnoreSynchronizerForActor(
+            Function<D, File> actorTypeTargetDirectoryResolver,
+            Function<D, String> actorTypeNameResolver) {
+        return e -> cleanGeneratedFromChecksumInDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
+
+    }
+
+    public static Runnable getDirectoryGitIgnoreSynchronizer(Supplier<File> targetDirectoryResolver) {
+        return () -> synchronizeGeneratorIgnoredFileWithGitIgnoreInDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
+    }
+
+
     public static <D> Consumer<D> getDirectoryChecksumCalculatorForActor(
             Function<D, File> actorTypeTargetDirectoryResolver,
             Function<D, String> actorTypeNameResolver) {
@@ -225,6 +260,28 @@ public class ModelGenerator<M> {
         Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
         Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
         writeGeneratedFiles(targetDirectory, filesystemFileEntryCollection, generatorFilesName);
+    }
+
+    public static void cleanGeneratedFromChecksumInDirectory(File targetDirectory, String generatorFilesName) {
+        GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
+        readGeneratedFiles(targetDirectory, generatorFilesName)
+                .stream()
+                .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
+                .forEach(e -> {
+                    deleteExitingFileInDirectory(targetDirectory, e.getPath());
+                });
+    }
+
+    public static void synchronizeGeneratorIgnoredFileWithGitIgnoreInDirectory(File targetDirectory, String generatorFilesName) {
+        GitIgnoreSynchronizer gitIgnoreSynchronizer = new GitIgnoreSynchronizer(targetDirectory.toPath());
+        gitIgnoreSynchronizer.addGeneratedFiles(readGeneratedFiles(targetDirectory, generatorFilesName));
+    }
+
+    public static void deleteExitingFileInDirectory(File targetDirectory, String generatorFilesName) {
+        File f = new File(targetDirectory, generatorFilesName);
+        if (f.exists()) {
+            f.delete();
+        }
     }
 
     public static List<GeneratorFileEntry> getGeneratorFiles(Collection<GeneratedFile> generatedFiles) {
@@ -279,8 +336,10 @@ public class ModelGenerator<M> {
     public static void writeGeneratedFiles(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection, String generatedFileName) {
         try {
             targetDirectory.mkdirs();
+            List<GeneratorFileEntry> generatorFileEntryList = new ArrayList<>(generatorFileEntryCollection);
+            Collections.sort(generatorFileEntryList, Comparator.comparing(GeneratorFileEntry::getPath));
             Files.write(Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
-                    String.join(NEWLINE, generatorFileEntryCollection.stream().map(f -> f.toString()).collect(Collectors.toList()))
+                    String.join(NEWLINE, generatorFileEntryList.stream().map(f -> f.toString()).collect(Collectors.toList()))
                             .getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new RuntimeException("Could not write file: "
@@ -356,6 +415,46 @@ public class ModelGenerator<M> {
                 }
             }
         }
+    }
+
+    public static void resetChecksums(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
+        resetChecksums(builder.build());
+    }
+
+    public static void resetChecksums(GeneratorParameter parameter) throws Exception {
+
+        getDirectoryChecksumCleaner(parameter.targetDirectoryResolver);
+
+        getDirectoryChecksumCleanerForActor(
+                parameter.getDiscriminatorTargetDirectoryResolver(),
+                parameter.getDiscriminatorTargetNameResolver());
+    }
+
+    public static <T> void resetChecksumsInDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) throws Exception {
+        discriminators.forEach(getDirectoryChecksumCleanerForActor(
+                parameter.getDiscriminatorTargetDirectoryResolver(),
+                parameter.getDiscriminatorTargetNameResolver()));
+        getDirectoryChecksumCleaner(parameter.targetDirectoryResolver).run();
+    }
+
+    public static void cleanGeneratedFromChecksum(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
+        resetChecksums(builder.build());
+    }
+
+    public static void cleanGeneratedFromChecksum(GeneratorParameter parameter) throws Exception {
+
+        getDirectoryChecksumCleaner(parameter.targetDirectoryResolver);
+
+        getDirectoryChecksumCleanerForActor(
+                parameter.getDiscriminatorTargetDirectoryResolver(),
+                parameter.getDiscriminatorTargetNameResolver());
+    }
+
+    public static <T> void cleanGeneratedFromChecksumInDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) throws Exception {
+        discriminators.forEach(getDirectoryChecksumCleanerForActor(
+                parameter.getDiscriminatorTargetDirectoryResolver(),
+                parameter.getDiscriminatorTargetNameResolver()));
+        getDirectoryChecksumCleaner(parameter.targetDirectoryResolver).run();
     }
 
     public static <T> void recalculateChecksumToDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) {
