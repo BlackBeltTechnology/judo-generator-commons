@@ -113,9 +113,10 @@ public class GitIgnoreSynchronizer {
                 }
             }
 
-            // Appending makrers and lines to be ignored
+            // Appending marker and lines to be ignored
             newGitignoreLines.add(GENEARATOR_AREA_START);
             filesToIgnore.stream()
+                    .filter(entry -> !entry.getPath().equals(GIT_IGNORE))
                     .forEach(entry -> {
                 newGitignoreLines.add(entry.getPath());
             });
