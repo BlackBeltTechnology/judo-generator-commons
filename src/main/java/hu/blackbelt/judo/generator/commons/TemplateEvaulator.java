@@ -27,9 +27,11 @@ import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Getter
 public class TemplateEvaulator {
@@ -80,7 +82,7 @@ public class TemplateEvaulator {
                 throw new IllegalArgumentException("Could not evaluate factory expression in " + template.toString(), e);
             }
 
-            if (!type.isAssignableFrom(ret.getClass())) {
+            if (ret != null && !type.isAssignableFrom(ret.getClass())) {
                 if (Collection.class.isAssignableFrom(ret.getClass())) {
                     return (C) Collections.singletonList(ret);
                 } else {
