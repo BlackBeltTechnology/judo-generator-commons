@@ -33,17 +33,18 @@ public final class GeneratorFileEntry implements Comparable {
     @NonNull
     String path;
 
-    @NonNull
     String checksum;
 
     public static GeneratorFileEntry fromString(String str) {
         String[] parts = str.split(",");
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("Could not parse file entry: " + str);
+        String name = parts[0];
+        String checksum = "";
+        if (parts.length == 2) {
+            checksum = parts[1];
         }
         return GeneratorFileEntry.generatorFileEntry()
-                .path(parts[0])
-                .checksum(parts[1])
+                .path(name)
+                .checksum(checksum)
                 .build();
     }
 
