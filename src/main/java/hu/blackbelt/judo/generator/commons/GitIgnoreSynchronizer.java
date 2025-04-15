@@ -113,10 +113,13 @@ public class GitIgnoreSynchronizer {
                 }
             }
 
+            var alreadyExistedGlobPatterns = new ArrayList<>(newGitignoreLines);
             // Appending marker and lines to be ignored
             newGitignoreLines.add(GENEARATOR_AREA_START);
             filesToIgnore.stream()
                     .filter(entry -> !entry.getPath().endsWith(GIT_IGNORE))
+                    .filter(entry -> !shouldExcludeFromGeneratorArea(rootPath,
+                            new File(rootPath.toFile(), entry.getPath()).toPath(), alreadyExistedGlobPatterns))
                     .forEach(entry -> {
                 newGitignoreLines.add(entry.getPath());
             });
@@ -133,5 +136,15 @@ public class GitIgnoreSynchronizer {
         } catch (IOException | ExecutionException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public boolean shouldExcludeFromGeneratorArea(Path rootPath, Path absolutePath, Collection<String> alreadyExistedGlobPatterns) {
+        Path currentPath = rootPath;
+        Path relativePath = Paths.get(absolutePath.normalize().toString().replace(rootPath.toString() + separator, ""));
+        boolean match = alreadyExistedGlobPatterns.stream().anyMatch((glob) -> {
+            final PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
+            return pathMatcher.matches(relativePath);
+        });
+        return match;
     }
 }
