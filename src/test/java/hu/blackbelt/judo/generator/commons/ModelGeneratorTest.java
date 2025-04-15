@@ -213,6 +213,24 @@ public class ModelGeneratorTest {
     }
 
     @Test
+    void testGitignoreSynchronizerWithExistingGitignoreWithExistingJudoBlockWhenIgnoredFilesHaveToBeExcludedFromGeneratedArea() throws IOException {
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
+
+        Path checksumIgnoreFile = absolutePathFor(".generator-checksum-ignore");
+        Path file1 = absolutePathFor("level1", "file1");
+        Path gitIgnore = absolutePathFor(".gitignore");
+        Files.write(gitIgnore, "**/file2|# JUDO GENERATOR BLOCK START|some dummy|another dummy|# JUDO GENERATOR BLOCK END|after|another|lines"
+                .replaceAll("\\|", "\n" ).getBytes(StandardCharsets.UTF_8));
+
+        Files.write(file1, "level1/file1Modified".getBytes(StandardCharsets.UTF_8));
+        Files.write(checksumIgnoreFile, "level1/file1".getBytes(StandardCharsets.UTF_8));
+        ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
+
+        ModelGenerator.synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, f -> false);
+        assertEquals("**/file2|# JUDO GENERATOR BLOCK START|level1/file1|level1/level2/file3|# JUDO GENERATOR BLOCK END|after|another|lines", Files.readAllLines(gitIgnore).stream().collect(Collectors.joining("|")));
+    }
+
+    @Test
     void testGeneratedFileChanges() throws IOException {
         ModelGenerator.writeDirectory(generatedFileCollecton, tmpTargetDir.toFile(), ModelGenerator.GENERATED_FILES, true);
 
