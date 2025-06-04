@@ -90,7 +90,7 @@ public class ModelGenerator<M> {
         try {
             generatedFile.setPath(templateEvaulator.getPathExpression().getValue(evaluationContext, String.class));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Could not evaluate path expression in " + generatorTemplate.toString());
+            throw new IllegalArgumentException("Could not evaluate path expression in " + generatorTemplate.toString(), e);
         }
 
         if (generatorTemplate.isCopy()) {

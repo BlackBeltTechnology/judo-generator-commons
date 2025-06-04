@@ -23,17 +23,17 @@ package hu.blackbelt.judo.generator.commons;
 import com.google.common.base.CaseFormat;
 import hu.blackbelt.judo.generator.commons.annotations.TemplateHelper;
 
-import static com.github.jknack.handlebars.internal.lang3.StringUtils.*;
-
 @TemplateHelper
 public class StringHelper extends StaticMethodValueResolver {
+
+
     @Override
     public Object resolve(Object context, String name) {
         if (context instanceof String) {
             if ("firstToUpperCase".equals(name)) {
-                return capitalize((String) context);
+                return firstToUpperCase((String) context);
             } else if ("firstToLowerCase".equals(name)) {
-                return uncapitalize((String) context);
+                return firstToLowerCase((String) context);
             }
         }
         return super.resolve(context, name);
@@ -75,6 +75,28 @@ public class StringHelper extends StaticMethodValueResolver {
             return null;
         }
         return string.replaceAll("[\\n\\t ]", "");
+    }
+
+    public static String firstToUpperCase(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        char firstChar = str.charAt(0);
+        if (Character.isUpperCase(firstChar)) {
+            return str;
+        }
+        return Character.toUpperCase(firstChar) + str.substring(1);
+    }
+
+    public static String firstToLowerCase(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        char firstChar = str.charAt(0);
+        if (Character.isLowerCase(firstChar)) {
+            return str;
+        }
+        return Character.toLowerCase(firstChar) + str.substring(1);
     }
 
 }
