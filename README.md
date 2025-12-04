@@ -456,11 +456,11 @@ flowchart TD
     
     GetCached --> CheckParams{Method has<br/>parameter?}
     
-    CheckParams -->|Yes| InvokeWithParam[Invoke with argument]
-    CheckParams -->|No| InvokeNoParam[Invoke without argument]
+    CheckParams -->|Yes| InvokeWith[Invoke with argument]
+    CheckParams -->|No| InvokeNo[Invoke without argument]
     
-    InvokeWithParam --> CheckContext{Has<br/>@ContextAccessor?}
-    InvokeNoParam --> CheckContext
+    InvokeWith --> CheckContext{Has<br/>@ContextAccessor?}
+    InvokeNo --> CheckContext
     
     CheckContext -->|Yes| BindTL[Bind context to ThreadLocal]
     CheckContext -->|No| Execute
