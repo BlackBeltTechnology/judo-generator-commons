@@ -246,7 +246,7 @@ sequenceDiagram
 [mermaid]
 ----
 flowchart TD
-    Start([generateFile called]) --> EvalCond{Evaluate<br/>condition<br/>expression?}
+    Start([generateFile called]) --> EvalCond{Evaluate\ncondition\nexpression?}
 
     EvalCond -->|Yes| CheckCond[Evaluate conditionExpression]
     EvalCond -->|No| SetCondTrue[condition = true]
@@ -270,11 +270,11 @@ flowchart TD
     BindContext --> ApplyTemplate[Apply Handlebars template]
     ApplyTemplate --> SetContent[Set content = template result]
 
-    CopyContent --> CheckPerm{Template has<br/>permission?}
+    CopyContent --> CheckPerm{Template has\npermission?}
     SetContent --> CheckPerm
 
     CheckPerm -->|Yes| UseTmplPerm[Use template permission]
-    CheckPerm -->|No| CheckGlobalPerm{Model has<br/>global permission?}
+    CheckPerm -->|No| CheckGlobalPerm{Model has\nglobal permission?}
 
     CheckGlobalPerm -->|Yes| UseGlobalPerm[Use global permission]
     CheckGlobalPerm -->|No| NoPerm[No permissions set]
@@ -301,15 +301,15 @@ flowchart TD
 flowchart TD
     Start([writeDirectory called]) --> Filter[Filter files by condition]
 
-    Filter --> InitIgnore[Initialize GeneratorIgnore<br/>& ChecksumIgnore]
+    Filter --> InitIgnore[Initialize GeneratorIgnore\n& ChecksumIgnore]
 
-    InitIgnore --> CalcNew[Calculate checksums<br/>for new files]
+    InitIgnore --> CalcNew[Calculate checksums\nfor new files]
     CalcNew --> ReadSaved[Read saved .generated-files]
     ReadSaved --> ReadFS[Read filesystem checksums]
 
-    ReadFS --> CreateMaps[Create Map objects:<br/>- generatorFileMap<br/>- savedFileMap<br/>- filesystemFileMap]
+    ReadFS --> CreateMaps[Create Map objects:\n- generatorFileMap\n- savedFileMap\n- filesystemFileMap]
 
-    CreateMaps --> DeleteOld{Files in filesystem<br/>but not in generator?}
+    CreateMaps --> DeleteOld{Files in filesystem\nbut not in generator?}
 
     DeleteOld -->|Yes| CheckIgnoreDel{In .generator-ignore?}
     DeleteOld -->|No| Validate
@@ -317,30 +317,30 @@ flowchart TD
     CheckIgnoreDel -->|No| DeleteFile[Delete file]
     CheckIgnoreDel -->|Yes| KeepFile1[Keep file]
 
-    DeleteFile --> Validate{validateChecksum<br/>enabled?}
+    DeleteFile --> Validate{validateChecksum\nenabled?}
     KeepFile1 --> Validate
 
-    Validate -->|Yes| CheckMismatch{Checksum<br/>mismatch in<br/>filesystem?}
+    Validate -->|Yes| CheckMismatch{Checksum\nmismatch in\nfilesystem?}
     Validate -->|No| PrepareWrite
 
-    CheckMismatch -->|Yes| CheckCsumIgnore{In .generator-<br/>checksum-ignore?}
+    CheckMismatch -->|Yes| CheckCsumIgnore{In .generator-\nchecksum-ignore?}
     CheckMismatch -->|No| PrepareWrite
 
-    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-<br/>ignore?}
+    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-\nignore?}
     CheckCsumIgnore -->|Yes| PrepareWrite
 
-    CheckGenIgnore -->|No| ThrowError[Throw IllegalStateException:<br/>Manual changes detected]
+    CheckGenIgnore -->|No| ThrowError[Throw IllegalStateException:\nManual changes detected]
     CheckGenIgnore -->|Yes| PrepareWrite[Prepare files to write]
 
-    PrepareWrite --> FilterWrite{Need to write?<br/>- Not in filesystem<br/>- Not in saved<br/>- Checksum differs}
+    PrepareWrite --> FilterWrite{Need to write?\n- Not in filesystem\n- Not in saved\n- Checksum differs}
 
-    FilterWrite -->|Yes| CheckIgnoreWrite{In .generator-<br/>ignore?}
+    FilterWrite -->|Yes| CheckIgnoreWrite{In .generator-\nignore?}
     FilterWrite -->|No| UpdateIndex
 
     CheckIgnoreWrite -->|No| WriteFile[Write file to filesystem]
     CheckIgnoreWrite -->|Yes| SkipFile[Skip writing]
 
-    WriteFile --> SetPerm{Has<br/>permissions?}
+    WriteFile --> SetPerm{Has\npermissions?}
 
     SetPerm -->|Yes| ApplyPOSIX[Apply POSIX permissions]
     SetPerm -->|No| NextFile
@@ -349,7 +349,7 @@ flowchart TD
     SkipFile --> NextFile
 
     NextFile -->|Yes| FilterWrite
-    NextFile -->|No| UpdateIndex[Update .generated-files<br/>with new checksums]
+    NextFile -->|No| UpdateIndex[Update .generated-files\nwith new checksums]
 
     UpdateIndex --> End([Complete])
     ThrowError --> ErrorEnd([Error: Manual changes])
@@ -373,29 +373,29 @@ flowchart TD
 
     CreateTE --> ParseExpr[Parse SpringEL expressions]
 
-    ParseExpr --> FactoryExpr{Has<br/>factoryExpression?}
+    ParseExpr --> FactoryExpr{Has\nfactoryExpression?}
     FactoryExpr -->|Yes| ParseFactory[Parse factory expression]
     FactoryExpr -->|No| PathExpr
 
-    ParseFactory --> PathExpr{Has<br/>pathExpression?}
+    ParseFactory --> PathExpr{Has\npathExpression?}
     PathExpr -->|Yes| ParsePath[Parse path expression]
     PathExpr -->|No| CondExpr
 
-    ParsePath --> CondExpr{Has<br/>conditionExpression?}
+    ParsePath --> CondExpr{Has\nconditionExpression?}
     CondExpr -->|Yes| ParseCond[Parse condition expression]
     CondExpr -->|No| TmplCtx
 
-    ParseCond --> TmplCtx{Has<br/>templateContext?}
+    ParseCond --> TmplCtx{Has\ntemplateContext?}
     TmplCtx -->|Yes| ParseContext[Parse context expressions]
     TmplCtx -->|No| CreateCtx
 
     ParseContext --> CreateCtx[Create StandardEvaluationContext]
 
-    CreateCtx --> SetVars[Set variables:<br/>- #self<br/>- #model<br/>- #actorType]
+    CreateCtx --> SetVars[Set variables:\n- #self\n- #model\n- #actorType]
 
-    SetVars --> RegHelpers[Register helper methods<br/>as SpringEL functions]
+    SetVars --> RegHelpers[Register helper methods\nas SpringEL functions]
 
-    RegHelpers --> EvalFactory{Evaluate<br/>factoryExpression?}
+    RegHelpers --> EvalFactory{Evaluate\nfactoryExpression?}
 
     EvalFactory -->|Yes| GetCollection[Get collection result]
     EvalFactory -->|No| EvalPath
@@ -406,12 +406,12 @@ flowchart TD
 
     EvalPath[Evaluate pathExpression] --> GetPath[Get file path string]
 
-    GetPath --> EvalCond{Evaluate<br/>conditionExpression?}
+    GetPath --> EvalCond{Evaluate\nconditionExpression?}
 
     EvalCond -->|Yes| GetBool[Get boolean result]
     EvalCond -->|No| BuildHBS
 
-    GetBool --> CheckBool{Result<br/>== true?}
+    GetBool --> CheckBool{Result\n== true?}
     CheckBool -->|Yes| BuildHBS
     CheckBool -->|No| SkipGen[Skip generation]
 
@@ -437,7 +437,7 @@ flowchart TD
 [mermaid]
 ----
 flowchart TD
-    Start([Helper method called]) --> InTemplate{Called from<br/>template or<br/>SpringEL?}
+    Start([Helper method called]) --> InTemplate{Called from\ntemplate or\nSpringEL?}
 
     InTemplate -->|Template| HBS[Handlebars invocation]
     InTemplate -->|SpringEL| SPEL[SpringEL function call]
@@ -445,23 +445,23 @@ flowchart TD
     HBS --> FindHelper[Find @TemplateHelper class]
     SPEL --> FindHelper
 
-    FindHelper --> CheckCache{Method in<br/>cache?}
+    FindHelper --> CheckCache{Method in\ncache?}
 
     CheckCache -->|Yes| GetCached[Get cached Method]
     CheckCache -->|No| ScanClass[Scan class for public static methods]
 
-    ScanClass --> FilterSig[Filter by signature:<br/>- 0 or 1 parameter<br/>- Non-void return]
+    ScanClass --> FilterSig[Filter by signature:\n- 0 or 1 parameter\n- Non-void return]
 
     FilterSig --> CacheMethod[Cache method reference]
 
     CacheMethod --> GetCached
 
-    GetCached --> CheckParams{Method has<br/>parameter?}
+    GetCached --> CheckParams{Method has\nparameter?}
 
     CheckParams -->|Yes| InvokeWith[Invoke with argument]
     CheckParams -->|No| InvokeNo[Invoke without argument]
 
-    InvokeWith --> CheckContext{Has<br/>@ContextAccessor?}
+    InvokeWith --> CheckContext{Has\n@ContextAccessor?}
     InvokeNo --> CheckContext
 
     CheckContext -->|Yes| BindTL[Bind context to ThreadLocal]
@@ -471,7 +471,7 @@ flowchart TD
 
     Execute --> GetResult[Get return value]
 
-    GetResult --> UnbindTL{Needs<br/>unbind?}
+    GetResult --> UnbindTL{Needs\nunbind?}
 
     UnbindTL -->|Yes| CleanTL[Clean ThreadLocal]
     UnbindTL -->|No| Return
@@ -492,24 +492,24 @@ flowchart TD
 flowchart TD
     Start([Start validation]) --> ReadSaved[Read .generated-files]
 
-    ReadSaved --> ParseSaved[Parse saved checksums:<br/>path,md5hash]
+    ReadSaved --> ParseSaved[Parse saved checksums:\npath,md5hash]
 
     ParseSaved --> ReadFS[Scan filesystem files]
 
     ReadFS --> CalcFS[Calculate MD5 for each file]
 
-    CalcFS --> Compare{For each file<br/>in saved list}
+    CalcFS --> Compare{For each file\nin saved list}
 
-    Compare --> FileExists{File exists<br/>in filesystem?}
+    Compare --> FileExists{File exists\nin filesystem?}
 
     FileExists -->|No| MissingOK[OK - Will be regenerated]
-    FileExists -->|Yes| CompareHash{Saved hash ==<br/>Filesystem hash?}
+    FileExists -->|Yes| CompareHash{Saved hash ==\nFilesystem hash?}
 
     CompareHash -->|Yes| MatchOK[OK - No changes]
-    CompareHash -->|No| CheckCsumIgnore{In .generator-<br/>checksum-ignore?}
+    CompareHash -->|No| CheckCsumIgnore{In .generator-\nchecksum-ignore?}
 
     CheckCsumIgnore -->|Yes| IgnoreOK[OK - Intentionally modified]
-    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-<br/>ignore?}
+    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-\nignore?}
 
     CheckGenIgnore -->|Yes| GenIgnoreOK[OK - Excluded from generation]
     CheckGenIgnore -->|No| ManualChange[MISMATCH - Manual change detected]
@@ -525,7 +525,7 @@ flowchart TD
     NextFile -->|Yes| Compare
     NextFile -->|No| HasErrors{Errors found?}
 
-    HasErrors -->|Yes| ThrowException[Throw IllegalStateException<br/>with error list]
+    HasErrors -->|Yes| ThrowException[Throw IllegalStateException\nwith error list]
     HasErrors -->|No| Success([Validation passed])
 
     ThrowException --> Error([Error: Manual changes])
@@ -542,38 +542,38 @@ flowchart TD
 [mermaid]
 ----
 flowchart TD
-    Start([Start generation]) --> CheckActorBased{Template has<br/>actorTypeBased=true?}
+    Start([Start generation]) --> CheckActorBased{Template has\nactorTypeBased=true?}
 
     CheckActorBased -->|No| NormalFlow[Normal single generation]
     CheckActorBased -->|Yes| GetActors[Get all actor types from model]
 
     GetActors --> FilterActors[Apply actorTypePredicate filter]
 
-    FilterActors --> LoopActors{For each<br/>actor type}
+    FilterActors --> LoopActors{For each\nactor type}
 
-    LoopActors --> SetActorCtx[Set context:<br/>- #actorType = current actor<br/>- #self = current actor]
+    LoopActors --> SetActorCtx[Set context:\n- #actorType = current actor\n- #self = current actor]
 
-    SetActorCtx --> EvalGuard{Has context<br/>guard?}
+    SetActorCtx --> EvalGuard{Has context\nguard?}
 
-    EvalGuard -->|Yes| CheckGuard{Guard<br/>passes?}
+    EvalGuard -->|Yes| CheckGuard{Guard\npasses?}
     EvalGuard -->|No| EvalConstraints
 
     CheckGuard -->|No| SkipActor[Skip all constraints for actor]
     CheckGuard -->|Yes| EvalConstraints
 
-    EvalConstraints --> LoopTemplates{For each<br/>template}
+    EvalConstraints --> LoopTemplates{For each\ntemplate}
 
-    LoopTemplates --> HasTmplGuard{Has template<br/>guard?}
+    LoopTemplates --> HasTmplGuard{Has template\nguard?}
 
-    HasTmplGuard -->|Yes| CheckTmplGuard{Guard<br/>passes?}
+    HasTmplGuard -->|Yes| CheckTmplGuard{Guard\npasses?}
     HasTmplGuard -->|No| GenFile
 
     CheckTmplGuard -->|No| SkipTemplate[Skip template]
     CheckTmplGuard -->|Yes| GenFile[Generate file]
 
-    GenFile --> ResolveDir[Resolve target directory:<br/>actorTypeTargetDirectoryResolver]
+    GenFile --> ResolveDir[Resolve target directory:\nactorTypeTargetDirectoryResolver]
 
-    ResolveDir --> AddToResult[Add to GeneratorResult<br/>generatedByDiscriminator[actor]]
+    ResolveDir --> AddToResult[Add to GeneratorResult\ngeneratedByDiscriminator[actor]]
 
     AddToResult --> NextTemplate{More templates?}
     SkipTemplate --> NextTemplate
@@ -585,16 +585,16 @@ flowchart TD
     NextActor -->|Yes| LoopActors
     NextActor -->|No| WriteActorFiles
 
-    WriteActorFiles --> LoopActorResults{For each actor<br/>result}
+    WriteActorFiles --> LoopActorResults{For each actor\nresult}
 
-    LoopActorResults --> WriteActorDir[Write to actor directory:<br/>.generated-files-[actorName]]
+    LoopActorResults --> WriteActorDir[Write to actor directory:\n.generated-files-[actorName]]
 
-    WriteActorDir --> NextActorResult{More actor<br/>results?}
+    WriteActorDir --> NextActorResult{More actor\nresults?}
 
     NextActorResult -->|Yes| LoopActorResults
     NextActorResult -->|No| End
 
-    NormalFlow --> WriteCommon[Write to common directory:<br/>.generated-files]
+    NormalFlow --> WriteCommon[Write to common directory:\n.generated-files]
 
     WriteCommon --> End([Complete])
 
