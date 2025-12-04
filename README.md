@@ -1,15 +1,30 @@
-= JUDO Generator Commons
-:toc: left
-:toclevels: 3
-:sectnums:
-:icons: font
-:source-highlighter: highlight.js
+# JUDO Generator Commons
 
-image:https://img.shields.io/badge/Java-21-blue.svg[Java 21]
-image:https://img.shields.io/badge/License-EPL%202.0-blue.svg[Eclipse Public License 2.0, link=https://www.eclipse.org/legal/epl-2.0/]
-image:https://github.com/BlackBeltTechnology/judo-generator-commons/workflows/Build/badge.svg[Build Status]
+![Java 21](https://img.shields.io/badge/Java-21-blue.svg)
+![Eclipse Public License 2.0](https://img.shields.io/badge/License-EPL%202.0-blue.svg)
+![Build Status](https://github.com/BlackBeltTechnology/judo-generator-commons/workflows/Build/badge.svg)
 
-== Overview
+## Table of Contents
+
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+- [Template Configuration](#template-configuration)
+- [Handlebars Templates](#handlebars-templates)
+- [Helper Classes](#helper-classes)
+- [Checksum Validation](#checksum-validation)
+- [Generator Ignore Patterns](#generator-ignore-patterns)
+- [File Permissions](#file-permissions)
+- [Template Overrides](#template-overrides)
+- [Advanced Features](#advanced-features)
+- [Troubleshooting](#troubleshooting)
+- [API Reference](#api-reference)
+- [Best Practices](#best-practices)
+- [Examples](#examples)
+- [Contributing](#contributing)
+- [License](#license)
+- [Resources](#resources)
+
+## Overview
 
 **JUDO Generator Commons** is a powerful, template-based code generation framework for Java. It enables developers to transform meta-models into production-ready code using Handlebars templates combined with Spring Expression Language (SpringEL).
 
@@ -22,69 +37,58 @@ This framework provides the foundation for building custom code generators with 
 * ✅ **Actor-based generation** - Generate files per domain entity
 * ✅ **Template inheritance** - Override templates easily
 
-=== Quick Facts
+### Quick Facts
 
-[cols="1,3"]
-|===
-| **Technology** | Java 21, Maven, OSGi Bundle
-| **License** | Eclipse Public License 2.0
-| **Template Engine** | Handlebars.java 4.4.0
-| **Expression Language** | Spring Expression Language 6.2.7
-| **Repository** | https://github.com/BlackBeltTechnology/judo-generator-commons
-|===
+| | |
+|---|---|
+| **Technology** | Java 21, Maven, OSGi Bundle |
+| **License** | Eclipse Public License 2.0 |
+| **Template Engine** | Handlebars.java 4.4.0 |
+| **Expression Language** | Spring Expression Language 6.2.7 |
+| **Repository** | https://github.com/BlackBeltTechnology/judo-generator-commons |
 
-=== Who Uses This?
+### Who Uses This?
 
 JUDO Generator Commons is used by the following meta-model projects:
 
-* https://github.com/BlackBeltTechnology/judo-meta-esm[**judo-meta-esm**] - Entity State Machine generator
-* https://github.com/BlackBeltTechnology/judo-meta-pam[**judo-meta-pam**] - Platform Abstract Model generator
-* https://github.com/BlackBeltTechnology/judo-meta-ui[**judo-meta-ui**] - User Interface generator
+* [**judo-meta-esm**](https://github.com/BlackBeltTechnology/judo-meta-esm) - Entity State Machine generator
+* [**judo-meta-pam**](https://github.com/BlackBeltTechnology/judo-meta-pam) - Platform Abstract Model generator
+* [**judo-meta-ui**](https://github.com/BlackBeltTechnology/judo-meta-ui) - User Interface generator
 
 Each meta-model project contains three modules that work with Generator Commons:
 
-[cols="1,3"]
-|===
-| Module | Purpose
+| Module | Purpose |
+|---|---|
+| `generator-engine` | Binds the meta-model to the generator framework, configures generation process |
+| `generator-maven-project` | Provides Maven plugin integration for build-time generation |
+| `generator-maven-plugin-test` | Contains test projects and example configurations |
 
-| `generator-engine`
-| Binds the meta-model to the generator framework, configures generation process
+## Getting Started
 
-| `generator-maven-project`
-| Provides Maven plugin integration for build-time generation
-
-| `generator-maven-plugin-test`
-| Contains test projects and example configurations
-|===
-
-== Getting Started
-
-=== Prerequisites
+### Prerequisites
 
 * Java 21 or higher
 * Maven 3.9.4 or higher
 * Familiarity with Handlebars templates (optional but helpful)
 * Basic understanding of Spring Expression Language (optional but helpful)
 
-=== Adding to Your Project
+### Adding to Your Project
 
 Add the following dependency to your `pom.xml`:
 
-[source,xml]
-----
+```xml
 <dependency>
     <groupId>hu.blackbelt.judo.generator</groupId>
     <artifactId>judo-generator-commons</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 </dependency>
-----
+```
 
-=== Basic Usage Example
+### Basic Usage Example
 
 Here's a minimal example of using the generator:
 
-[source,java]
-----
+```java
 import hu.blackbelt.judo.generator.commons.*;
 
 // 1. Create generator context
@@ -107,16 +111,15 @@ GeneratorParameter param = GeneratorParameter.builder()
 
 // 3. Generate files
 ModelGenerator.generateToDirectory(param);
-----
+```
 
-== Template Configuration
+## Template Configuration
 
-=== YAML Descriptor Structure
+### YAML Descriptor Structure
 
 Template configurations are defined in YAML files (e.g., `project.yaml`). Here's a typical structure:
 
-[source,yaml]
-----
+```yaml
 # Optional global permission for all templates
 permission: rwxr-xr-x
 
@@ -126,116 +129,65 @@ templateContext:
     expression: "#model.name"
 
 templates:
-  - name: entityClass                                    # <1>
-    pathExpression: "#actorType.name + '.java'"          # <2>
-    templateName: templates/Entity.java.hbs              # <3>
-    actorTypeBased: true                                 # <4>
-    conditionExpression: "#actorType.isPublic()"         # <5>
-    permission: rw-r--r--                                # <6>
-
+  - name: entityClass                                    # 1
+    pathExpression: "#actorType.name + '.java'"          # 2
+    templateName: templates/Entity.java.hbs              # 3
+    actorTypeBased: true                                 # 4
+    conditionExpression: "#actorType.isPublic()"         # 5
+    permission: rw-r--r--                                # 6
+    
   - name: serviceInterface
     pathExpression: "'services/' + #model.name + 'Service.java'"
     templateName: templates/Service.java.hbs
-    factoryExpression: "#model.getAllServices()"         # <7>
-    templateContext:                                     # <8>
+    factoryExpression: "#model.getAllServices()"         # 7
+    templateContext:                                     # 8
       - name: version
         expression: "'1.0.0'"
-----
-<1> Unique identifier for this template (used for overrides)
-<2> SpringEL expression defining the output file path
-<3> Path to the Handlebars template file
-<4> When `true`, template is called for each actor type
-<5> Optional condition - skip generation if evaluates to `false`
-<6> POSIX file permissions (owner, group, other)
-<7> Expression returning a collection to iterate over
-<8> Additional variables available in the template
+```
 
-=== Template Properties Reference
+**Annotations:**
+1. Unique identifier for this template (used for overrides)
+2. SpringEL expression defining the output file path
+3. Path to the Handlebars template file
+4. When `true`, template is called for each actor type
+5. Optional condition - skip generation if evaluates to `false`
+6. POSIX file permissions (owner, group, other)
+7. Expression returning a collection to iterate over
+8. Additional variables available in the template
 
-[cols="1,1,1,3"]
-|===
-| Property | Type | Required | Description
+### Template Properties Reference
 
-| `name`
-| String
-| ✅ Yes
-| Unique template identifier. Used for template overrides.
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `name` | String | ✅ Yes | Unique template identifier. Used for template overrides. |
+| `pathExpression` | SpringEL | ✅ Yes | Expression that evaluates to the output file path (relative to target directory). |
+| `templateName` | String | No | Path to the Handlebars template file (relative to template root). Omit for inline templates. |
+| `actorTypeBased` | Boolean | No | If `true`, the template is called for each actor type. Default: `false`. |
+| `factoryExpression` | SpringEL | No | Expression returning a collection. Template is called once per element. |
+| `conditionExpression` | SpringEL | No | Boolean expression. Generation is skipped if evaluates to `false`. |
+| `templateContext` | List | No | Additional variables to make available in the template. |
+| `permission` | String | No | POSIX permissions in format `rwxrwxrwx` (owner, group, other). Overrides global permission. |
+| `copy` | Boolean | No | If `true`, treats template as binary file (no templating applied). Default: `false`. |
+| `exclude` | Boolean | No | If `true`, excludes this template from generation (used in overrides). Default: `false`. |
 
-| `pathExpression`
-| SpringEL
-| ✅ Yes
-| Expression that evaluates to the output file path (relative to target directory).
+### Expression Language (SpringEL)
 
-| `templateName`
-| String
-| No
-| Path to the Handlebars template file (relative to template root). Omit for inline templates.
+All expressions in YAML use [Spring Expression Language (SpringEL)](https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#expressions).
 
-| `actorTypeBased`
-| Boolean
-| No
-| If `true`, the template is called for each actor type. Default: `false`.
-
-| `factoryExpression`
-| SpringEL
-| No
-| Expression returning a collection. Template is called once per element.
-
-| `conditionExpression`
-| SpringEL
-| No
-| Boolean expression. Generation is skipped if evaluates to `false`.
-
-| `templateContext`
-| List
-| No
-| Additional variables to make available in the template.
-
-| `permission`
-| String
-| No
-| POSIX permissions in format `rwxrwxrwx` (owner, group, other). Overrides global permission.
-
-| `copy`
-| Boolean
-| No
-| If `true`, treats template as binary file (no templating applied). Default: `false`.
-
-| `exclude`
-| Boolean
-| No
-| If `true`, excludes this template from generation (used in overrides). Default: `false`.
-|===
-
-=== Expression Language (SpringEL)
-
-All expressions in YAML use https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#expressions[Spring Expression Language (SpringEL)].
-
-==== Available Variables
+#### Available Variables
 
 The following variables are available in expressions:
 
-[cols="1,3"]
-|===
-| Variable | Description
+| Variable | Description |
+|---|---|
+| `#self` | Context-dependent: actor type (if `actorTypeBased=true`), current iteration element (in `factoryExpression`), or the model (otherwise) |
+| `#model` | The model object passed to the generator |
+| `#actorType` | Current actor type (only available when `actorTypeBased=true`) |
+| Helper methods | Any public static method in `@TemplateHelper` classes, prefixed with `#` |
 
-| `#self`
-| Context-dependent: actor type (if `actorTypeBased=true`), current iteration element (in `factoryExpression`), or the model (otherwise)
+#### Expression Examples
 
-| `#model`
-| The model object passed to the generator
-
-| `#actorType`
-| Current actor type (only available when `actorTypeBased=true`)
-
-| Helper methods
-| Any public static method in `@TemplateHelper` classes, prefixed with `#`
-|===
-
-==== Expression Examples
-
-[source,yaml]
-----
+```yaml
 # Simple property access
 pathExpression: "#actorType.name + '.java'"
 
@@ -254,34 +206,25 @@ pathExpression: "#upperCase(#actorType.name) + '.java'"
 # Collection operations
 factoryExpression: "#model.entities.?[public == true]"  # Filter
 conditionExpression: "#actorType.methods.size() > 0"    # Size check
-----
+```
 
-==== Understanding `#self`
+#### Understanding `#self`
 
 The meaning of `#self` depends on context:
 
-[cols="1,2"]
-|===
-| Context | `#self` refers to
+| Context | `#self` refers to |
+|---|---|
+| `actorTypeBased=true` | The current actor type being processed |
+| Inside `factoryExpression` iteration | The current element from the collection |
+| Neither of above | The model object |
 
-| `actorTypeBased=true`
-| The current actor type being processed
+## Handlebars Templates
 
-| Inside `factoryExpression` iteration
-| The current element from the collection
+### Template Basics
 
-| Neither of above
-| The model object
-|===
+Templates use [Handlebars.java](https://github.com/jknack/handlebars.java) syntax:
 
-== Handlebars Templates
-
-=== Template Basics
-
-Templates use https://github.com/jknack/handlebars.java[Handlebars.java] syntax:
-
-[source,handlebars]
-----
+```handlebars
 // Entity.java.hbs
 package {{packageName}};
 
@@ -289,29 +232,28 @@ package {{packageName}};
  * Generated entity class for {{name}}
  */
 public class {{name}} {
-
+    
     {{#each properties}}
     private {{type}} {{name}};
     {{/each}}
-
+    
     {{#each properties}}
     public {{type}} get{{capitalize name}}() {
         return {{name}};
     }
-
+    
     public void set{{capitalize name}}({{type}} {{name}}) {
         this.{{name}} = {{name}};
     }
     {{/each}}
 }
-----
+```
 
-=== Using Helper Methods
+### Using Helper Methods
 
 Helper methods extend template functionality:
 
-[source,handlebars]
-----
+```handlebars
 {{! Using string helpers }}
 Class name: {{upperCase className}}
 Table name: {{camelCaseToSnakeCase tableName}}
@@ -322,14 +264,14 @@ public class {{name}} { ... }
 {{else}}
 /* package-private */ class {{name}} { ... }
 {{/if}}
-----
+```
 
-=== Template Context Variables
+### Template Context Variables
 
 Variables from `templateContext` are directly accessible:
 
-[source,yaml]
-----
+**YAML Configuration:**
+```yaml
 templates:
   - name: config
     templateName: config.hbs
@@ -338,42 +280,41 @@ templates:
         expression: "'2.0.0'"
       - name: buildDate
         expression: "T(java.time.LocalDate).now()"
-----
+```
 
-[source,handlebars]
-----
+**Template:**
+```handlebars
 // config.hbs
 Application Version: {{appVersion}}
 Build Date: {{buildDate}}
-----
+```
 
-== Helper Classes
+## Helper Classes
 
 Helper classes provide reusable logic for templates and expressions.
 
-=== Creating a Helper Class
+### Creating a Helper Class
 
-[source,java]
-----
+```java
 import hu.blackbelt.judo.generator.commons.StaticMethodValueResolver;
 import hu.blackbelt.judo.generator.commons.annotations.TemplateHelper;
 
-@TemplateHelper  // <1>
-public class StringHelper extends StaticMethodValueResolver {  // <2>
-
-    // <3>
+@TemplateHelper  // 1
+public class StringHelper extends StaticMethodValueResolver {  // 2
+    
+    // 3
     public static String upperCase(Object obj) {
         return obj != null ? obj.toString().toUpperCase() : "";
     }
-
+    
     public static String camelCaseToSnakeCase(Object obj) {
         if (obj == null) return "";
         return CaseFormat.LOWER_CAMEL.to(
-            CaseFormat.LOWER_UNDERSCORE,
+            CaseFormat.LOWER_UNDERSCORE, 
             obj.toString()
         );
     }
-
+    
     public static boolean isEmpty(Object obj) {
         if (obj == null) return true;
         if (obj instanceof String) return ((String) obj).isEmpty();
@@ -381,34 +322,25 @@ public class StringHelper extends StaticMethodValueResolver {  // <2>
         return false;
     }
 }
-----
-<1> Mark the class with `@TemplateHelper` for automatic discovery
-<2> Extend `StaticMethodValueResolver` for enhanced method resolution
-<3> Helper methods **must** be `public static`
+```
 
-=== Helper Method Requirements
+**Annotations:**
+1. Mark the class with `@TemplateHelper` for automatic discovery
+2. Extend `StaticMethodValueResolver` for enhanced method resolution
+3. Helper methods **must** be `public static`
 
-[cols="1,3"]
-|===
-| Requirement | Description
+### Helper Method Requirements
 
-| **Visibility**
-| Must be `public static`
+| Requirement | Description |
+|---|---|
+| **Visibility** | Must be `public static` |
+| **Parameters** | Maximum 1 parameter (or 0 parameters) |
+| **Return Type** | Must return a value (non-void) |
+| **Class Annotation** | Class must have `@TemplateHelper` annotation |
 
-| **Parameters**
-| Maximum 1 parameter (or 0 parameters)
+### Using Helpers in Templates
 
-| **Return Type**
-| Must return a value (non-void)
-
-| **Class Annotation**
-| Class must have `@TemplateHelper` annotation
-|===
-
-=== Using Helpers in Templates
-
-[source,handlebars]
-----
+```handlebars
 {{! Direct method call }}
 {{upperCase actorType.name}}
 
@@ -419,101 +351,90 @@ No properties defined.
 
 {{! Chained calls }}
 {{upperCase (camelCaseToSnakeCase tableName)}}
-----
+```
 
-=== Using Helpers in SpringEL
+### Using Helpers in SpringEL
 
-[source,yaml]
-----
+```yaml
 templates:
   - name: entity
     pathExpression: "#upperCase(#actorType.name) + '.java'"
     conditionExpression: "!#isEmpty(#actorType.properties)"
-----
+```
 
-=== Accessing Template Parameters
+### Accessing Template Parameters
 
 For helpers that need access to template parameters (e.g., configuration values):
 
-[source,java]
-----
+```java
 import hu.blackbelt.judo.generator.commons.ThreadLocalContextHolder;
 import hu.blackbelt.judo.generator.commons.annotations.ContextAccessor;
 import hu.blackbelt.judo.generator.commons.annotations.TemplateHelper;
 
 @TemplateHelper
-@ContextAccessor  // <1>
+@ContextAccessor  // 1
 public class ConfigHelper extends StaticMethodValueResolver {
-
-    // <2>
+    
+    // 2
     public static void bindContext(Map<String, ?> context) {
         ThreadLocalContextHolder.bindContext(context);
     }
-
-    // <3>
+    
+    // 3
     public static synchronized String getApiPrefix(Object obj) {
         return (String) ThreadLocalContextHolder.getVariable("apiPrefix");
     }
-
+    
     public static synchronized boolean isDebugMode(Object obj) {
         String debug = (String) ThreadLocalContextHolder.getVariable("debugMode");
         return Boolean.parseBoolean(debug);
     }
 }
-----
-<1> Add `@ContextAccessor` annotation
-<2> Implement `bindContext` method for framework integration
-<3> Use `synchronized` and `ThreadLocalContextHolder` for thread-safe parameter access
+```
 
-IMPORTANT: This pattern is required when helper methods need to access template parameters during parallel builds. Without `ThreadLocal`, you may encounter race conditions.
+**Annotations:**
+1. Add `@ContextAccessor` annotation
+2. Implement `bindContext` method for framework integration
+3. Use `synchronized` and `ThreadLocalContextHolder` for thread-safe parameter access
 
-== Checksum Validation
+> **⚠️ Important:** This pattern is required when helper methods need to access template parameters during parallel builds. Without `ThreadLocal`, you may encounter race conditions.
+
+## Checksum Validation
 
 The generator uses MD5 checksums to protect against accidental file overwrites and enable incremental generation.
 
-=== How It Works
+### How It Works
 
-. **Generation**: When files are generated, their MD5 checksums are calculated and stored
-. **Storage**: Checksums are saved in index files:
-  - `.generated-files` - For non-actor-based templates
-  - `.generated-files-[actor]` - For actor-based templates (one per actor)
-. **Validation**: On subsequent generations, current file checksums are compared against stored checksums
-. **Protection**: If a file has been manually modified (checksum mismatch), generation fails with an error
+1. **Generation**: When files are generated, their MD5 checksums are calculated and stored
+2. **Storage**: Checksums are saved in index files:
+   - `.generated-files` - For non-actor-based templates
+   - `.generated-files-[actor]` - For actor-based templates (one per actor)
+3. **Validation**: On subsequent generations, current file checksums are compared against stored checksums
+4. **Protection**: If a file has been manually modified (checksum mismatch), generation fails with an error
 
-=== Checksum Index Format
+### Checksum Index Format
 
 Each line in the index file contains a file path and its MD5 checksum:
 
-----
+```
 src/main/java/com/example/User.java,5d41402abc4b2a76b9719d911017c592
 src/main/java/com/example/Order.java,7d793037a0760186574b0282f2f435e7
 src/main/resources/config.properties,098f6bcd4621d373cade4e832627b4f6
-----
+```
 
-=== Handling Modified Files
+### Handling Modified Files
 
 If you encounter the error: **"Generated file have been modified, please revert or delete it or add to generator-ignore"**
 
 You have three options:
 
-[cols="1,3,2"]
-|===
-| Option | When to Use | How
+| Option | When to Use | How |
+|---|---|---|
+| **Revert** | You want to discard manual changes | `git checkout -- path/to/file.java` |
+| **Delete** | You want the file regenerated | `rm path/to/file.java` then re-run generator |
+| **Ignore** | You want to keep manual changes permanently | Add to `.generator-ignore` (see below) |
 
-| **Revert**
-| You want to discard manual changes
-| `git checkout -- path/to/file.java`
-
-| **Delete**
-| You want the file regenerated
-| `rm path/to/file.java` then re-run generator
-
-| **Ignore**
-| You want to keep manual changes permanently
-| Add to `.generator-ignore` (see below)
-|===
-
-=== Incremental Generation
+### Incremental Generation
 
 The checksum system enables intelligent incremental generation:
 
@@ -521,31 +442,29 @@ The checksum system enables intelligent incremental generation:
 * ✅ **Modified files**: Only files with content changes are written
 * ✅ **Deleted templates**: Files removed from templates are automatically deleted from filesystem
 
-=== Resetting Checksums
+### Resetting Checksums
 
 To reset all checksums (useful for debugging or fresh starts):
 
-[source,java]
-----
+```java
 ModelGenerator.resetChecksums(targetDirectory, discriminators);
-----
+```
 
 Or delete the index files manually:
 
-[source,bash]
-----
+```bash
 rm .generated-files*
-----
+```
 
-== Generator Ignore Patterns
+## Generator Ignore Patterns
 
 The `.generator-ignore` file allows you to exclude files from generation, enabling you to maintain custom modifications.
 
-=== Format
+### Format
 
 Uses GLOB patterns, same syntax as `.gitignore`:
 
-----
+```
 # Ignore specific files
 src/main/java/com/example/CustomUser.java
 src/main/resources/custom-config.xml
@@ -574,81 +493,53 @@ test_*.java
 /bin/                    # Only bin at project root
 docs/**/*.md            # All .md files in docs and subdirectories
 src/*.init              # .init files directly in src
-----
+```
 
-=== How It Works
+### How It Works
 
-. **Hierarchy**: `.generator-ignore` files can exist at any directory level
-. **Inheritance**: Patterns are combined from all parent directories
-. **Index**: Ignored files still appear in `.generated-files` index
-. **Checksums**: Checksum validation still performed, but writing is skipped
-. **Responsibility**: Once ignored, maintaining the file is **your responsibility**
+1. **Hierarchy**: `.generator-ignore` files can exist at any directory level
+2. **Inheritance**: Patterns are combined from all parent directories
+3. **Index**: Ignored files still appear in `.generated-files` index
+4. **Checksums**: Checksum validation still performed, but writing is skipped
+5. **Responsibility**: Once ignored, maintaining the file is **your responsibility**
 
-=== Example Use Cases
+### Example Use Cases
 
-[cols="1,2,2"]
-|===
-| Use Case | Pattern | Explanation
+| Use Case | Pattern | Explanation |
+|---|---|---|
+| Customize generated entity | `src/main/java/User.java` | Ignore specific file, keep your modifications |
+| Protect all configuration files | `**/*-config.xml` | Ignore all files ending with `-config.xml` anywhere |
+| Exclude test resources | `src/test/resources/**` | Don't regenerate anything in test resources |
+| Keep manual scripts | `scripts/*.sh` | Protect shell scripts from regeneration |
+| Exclude entire module | `legacy-module/` | Don't touch anything in legacy-module directory |
 
-| Customize generated entity
-| `src/main/java/User.java`
-| Ignore specific file, keep your modifications
-
-| Protect all configuration files
-| `**/*-config.xml`
-| Ignore all files ending with `-config.xml` anywhere
-
-| Exclude test resources
-| `src/test/resources/**`
-| Don't regenerate anything in test resources
-
-| Keep manual scripts
-| `scripts/*.sh`
-| Protect shell scripts from regeneration
-
-| Exclude entire module
-| `legacy-module/`
-| Don't touch anything in legacy-module directory
-|===
-
-=== Checksum Ignore
+### Checksum Ignore
 
 For cases where you want to **allow overwriting** manually modified files, use `.generator-checksum-ignore`:
 
-----
+```
 # Allow overwriting these files even if manually modified
 src/main/java/AutoUpdatedConfig.java
 version.properties
-----
+```
 
 The difference:
 
-[cols="2,3,3"]
-|===
-| File | `.generator-ignore` | `.generator-checksum-ignore`
+| File | `.generator-ignore` | `.generator-checksum-ignore` |
+|---|---|---|
+| **Purpose** | Prevent file from being generated | Allow overwriting modified file |
+| **Generation** | File is NOT written | File IS written (overwrites manual changes) |
+| **Use Case** | Permanent manual modifications | Temporary manual modifications that should be overwritten |
 
-| **Purpose**
-| Prevent file from being generated
-| Allow overwriting modified file
-
-| **Generation**
-| File is NOT written
-| File IS written (overwrites manual changes)
-
-| **Use Case**
-| Permanent manual modifications
-| Temporary manual modifications that should be overwritten
-|===
-
-== File Permissions
+## File Permissions
 
 The generator can set POSIX file permissions on generated files.
 
-=== Permission Format
+### Permission Format
 
 Uses standard POSIX notation: `rwxrwxrwx`
 
-----
+```
 rwx rwx rwx
 │   │   └── Other (all users)
 │   └────── Group
@@ -658,77 +549,54 @@ r = read    (4)
 w = write   (2)
 x = execute (1)
 - = no permission
-----
+```
 
-=== Setting Permissions
+### Setting Permissions
 
-==== Global Permission
+#### Global Permission
 
 Applies to all templates:
 
-[source,yaml]
-----
+```yaml
 permission: rw-r--r--  # Owner: rw, Group: r, Other: r
 
 templates:
   - name: script
     templateName: script.sh.hbs
     # Inherits global permission
-----
+```
 
-==== Template-Level Permission
+#### Template-Level Permission
 
 Overrides global permission for specific template:
 
-[source,yaml]
-----
+```yaml
 permission: rw-r--r--  # Global: read-only for group/other
 
 templates:
   - name: executable
     templateName: start.sh.hbs
     permission: rwxr-xr-x  # Override: make executable
-
+    
   - name: secret
     templateName: secrets.txt.hbs
     permission: rw-------  # Override: owner-only access
-----
+```
 
-=== Common Permission Patterns
+### Common Permission Patterns
 
-[cols="1,2,2"]
-|===
-| Permission | Notation | Use Case
+| Permission | Notation | Use Case |
+|---|---|---|
+| `rwxr-xr-x` | 755 | Executable scripts, public programs |
+| `rw-r--r--` | 644 | Regular source files, documentation |
+| `rw-rw-r--` | 664 | Shared project files |
+| `rwx------` | 700 | Private executables |
+| `rw-------` | 600 | Secrets, private configuration |
+| `rwxrwxrwx` | 777 | ⚠️ Public write access (avoid in production) |
 
-| `rwxr-xr-x`
-| 755
-| Executable scripts, public programs
+### Example
 
-| `rw-r--r--`
-| 644
-| Regular source files, documentation
-
-| `rw-rw-r--`
-| 664
-| Shared project files
-
-| `rwx------`
-| 700
-| Private executables
-
-| `rw-------`
-| 600
-| Secrets, private configuration
-
-| `rwxrwxrwx`
-| 777
-| ⚠️ Public write access (avoid in production)
-|===
-
-=== Example
-
-[source,yaml]
-----
+```yaml
 # Global: standard source file permissions
 permission: rw-r--r--
 
@@ -737,35 +605,35 @@ templates:
   - name: entity
     templateName: Entity.java.hbs
     pathExpression: "#actorType.name + '.java'"
-
+    
   # Shell script - needs execute permission
   - name: startScript
     templateName: start.sh.hbs
     pathExpression: "'bin/start.sh'"
     permission: rwxr-xr-x
-
+    
   # Database password file - owner-only access
   - name: dbPassword
     templateName: db-password.txt.hbs
     pathExpression: "'secrets/db-password.txt'"
     permission: rw-------
-----
+```
 
-NOTE: On non-POSIX systems (e.g., Windows), permission settings are gracefully ignored.
+> **Note:** On non-POSIX systems (e.g., Windows), permission settings are gracefully ignored.
 
-== Template Overrides
+## Template Overrides
 
 Template overrides allow you to customize generation behavior without modifying the base templates.
 
-=== How Overrides Work
+### How Overrides Work
 
-. **Base Templates**: Original templates in the base directory
-. **Override Templates**: Custom templates in override directory with `.override.hbs` extension
-. **Resolution**: Generator looks for override first, falls back to base
+1. **Base Templates**: Original templates in the base directory
+2. **Override Templates**: Custom templates in override directory with `.override.hbs` extension
+3. **Resolution**: Generator looks for override first, falls back to base
 
-=== Directory Structure
+### Directory Structure
 
-----
+```
 templates/
 ├── base/
 │   ├── Entity.java.hbs              # Original template
@@ -776,48 +644,44 @@ templates/
     ├── Entity.java.override.hbs     # Overrides Entity.java.hbs
     └── Service.java.override.hbs    # Overrides Service.java.hbs
     # Controller.java.hbs uses base (no override)
-----
+```
 
-=== Override Examples
+### Override Examples
 
-==== Example 1: Customize Entity Template
+#### Example 1: Customize Entity Template
 
-Base template (`templates/base/Entity.java.hbs`):
-[source,handlebars]
-----
+**Base template** (`templates/base/Entity.java.hbs`):
+```handlebars
 public class {{name}} {
     // Base implementation
 }
-----
+```
 
-Override template (`templates/overrides/Entity.java.override.hbs`):
-[source,handlebars]
-----
+**Override template** (`templates/overrides/Entity.java.override.hbs`):
+```handlebars
 import lombok.Data;
 
 @Data  // Add Lombok annotation
 public class {{name}} {
     // Custom implementation with Lombok
 }
-----
+```
 
-==== Example 2: Exclude Template from Generation
+#### Example 2: Exclude Template from Generation
 
 In your override YAML:
 
-[source,yaml]
-----
+```yaml
 templates:
   - name: deprecatedTemplate
     exclude: true  # Don't generate this template
-----
+```
 
-=== Override Configuration
+### Override Configuration
 
 Override templates in YAML by name:
 
-[source,yaml]
-----
+```yaml
 # base-project.yaml
 templates:
   - name: entityClass
@@ -835,125 +699,118 @@ templates:
     # Override permission
     permission: rwxr-xr-x
     # Template file is automatically Entity.java.override.hbs
-----
+```
 
-=== Loading Overrides
+### Loading Overrides
 
-[source,java]
-----
+```java
 // Load base model
 GeneratorModel baseModel = GeneratorModel.loadYamlURL(
-    baseYamlUrl,
+    baseYamlUrl, 
     templateMixin
 );
 
 // Load override model
 GeneratorModel overrideModel = GeneratorModel.loadYamlURL(
-    overrideYamlUrl,
+    overrideYamlUrl, 
     templateMixin
 );
 
 // Apply overrides
 baseModel.overrideTemplates(overrideModel);
-----
+```
 
-== Advanced Features
+## Advanced Features
 
-=== Actor-Based Generation
+### Actor-Based Generation
 
 Generate files per domain entity (actor):
 
-[source,yaml]
-----
+```yaml
 templates:
   - name: entityClass
     templateName: Entity.java.hbs
     pathExpression: "#actorType.name + '.java'"
     actorTypeBased: true  # Called once per actor type
-----
+```
 
 In your generator parameter:
 
-[source,java]
-----
+```java
 GeneratorParameter param = GeneratorParameter.builder()
     .actorTypePredicate(actor -> actor.isPublic())  // Filter actors
-    .actorTypeTargetDirectoryResolver(actor ->
+    .actorTypeTargetDirectoryResolver(actor -> 
         new File("output/" + actor.getPackagePath())
     )
     .build();
-----
+```
 
-=== Factory Expressions
+### Factory Expressions
 
 Generate multiple files from a single template:
 
-[source,yaml]
-----
+```yaml
 templates:
   - name: queryClass
     templateName: Query.java.hbs
     # Returns collection of queries
     factoryExpression: "#model.getAllQueries()"
     pathExpression: "'queries/' + #self.name + 'Query.java'"
-----
+```
 
 Each element in the collection becomes `#self` in expressions.
 
-=== Conditional Generation
+### Conditional Generation
 
 Skip generation based on conditions:
 
-[source,yaml]
-----
+```yaml
 templates:
   - name: publicApi
     templateName: PublicAPI.java.hbs
     # Only generate if actor is public
     conditionExpression: "#actorType.isPublic()"
     actorTypeBased: true
-----
+```
 
-=== Binary File Copy
+### Binary File Copy
 
 Copy binary files without templating:
 
-[source,yaml]
-----
+```yaml
 templates:
   - name: logo
     templateName: images/logo.png  # Binary file
     pathExpression: "'static/logo.png'"
     copy: true  # No template processing
-----
+```
 
-=== GitIgnore Synchronization
+### GitIgnore Synchronization
 
 Automatically maintain `.gitignore` with generated files:
 
-[source,java]
-----
+```java
 import hu.blackbelt.judo.generator.commons.GitIgnoreSynchronizer;
 
 GitIgnoreSynchronizer synchronizer = new GitIgnoreSynchronizer(projectRoot);
 synchronizer.addGeneratedFiles(generatedFileEntries);
-----
+```
 
 This adds a managed block to `.gitignore`:
 
-----
+```
 # JUDO GENERATOR BLOCK START
 /generated/User.java
 /generated/Order.java
 /generated/Product.java
 # JUDO GENERATOR BLOCK END
-----
+```
 
-== Troubleshooting
+## Troubleshooting
 
-=== Common Issues
+### Common Issues
 
-==== "Helper method not found"
+#### "Helper method not found"
 
 **Symptom**: Template compilation error, method not recognized
 
@@ -963,7 +820,7 @@ This adds a managed block to `.gitignore`:
 * ✅ Check method has 0 or 1 parameter
 * ✅ Confirm helper class is in classpath
 
-==== "Generated file have been modified"
+#### "Generated file have been modified"
 
 **Symptom**: `IllegalStateException` during generation
 
@@ -973,7 +830,7 @@ This adds a managed block to `.gitignore`:
 * Add to `.generator-ignore` to keep changes
 * Add to `.generator-checksum-ignore` to allow overwrite
 
-==== "Template override not applied"
+#### "Template override not applied"
 
 **Symptom**: Base template used instead of override
 
@@ -983,7 +840,7 @@ This adds a managed block to `.gitignore`:
 * ✅ Ensure template names match in YAML
 * ✅ Confirm override model is loaded and applied
 
-==== "Expression evaluation fails"
+#### "Expression evaluation fails"
 
 **Symptom**: `SpelEvaluationException` during generation
 
@@ -993,7 +850,7 @@ This adds a managed block to `.gitignore`:
 * ✅ Ensure helper method is registered
 * ✅ Test expression in isolation
 
-==== "Permissions not applied"
+#### "Permissions not applied"
 
 **Symptom**: Generated files have wrong permissions
 
@@ -1003,7 +860,7 @@ This adds a managed block to `.gitignore`:
 * ✅ Confirm template permission overrides global permission
 * ✅ Check file wasn't modified externally after generation
 
-==== "Parallel build issues"
+#### "Parallel build issues"
 
 **Symptom**: Inconsistent results, race conditions
 
@@ -1013,68 +870,52 @@ This adds a managed block to `.gitignore`:
 * ✅ Access parameters via `ThreadLocalContextHolder`
 * ✅ Mark helper methods `synchronized`
 
-=== Debug Mode
+### Debug Mode
 
 Enable debug logging in `logback.xml` or `logback-test.xml`:
 
-[source,xml]
-----
+```xml
 <configuration>
     <logger name="hu.blackbelt.judo.generator" level="DEBUG"/>
-
+    
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>
-----
+```
 
-=== Validation Checklist
+### Validation Checklist
 
 Before reporting issues, verify:
 
-* [ ] Java 21 or higher installed
-* [ ] Maven 3.9.4 or higher
-* [ ] YAML syntax is valid
-* [ ] Template files exist at specified paths
-* [ ] Helper classes are on classpath
-* [ ] Expression syntax is correct (SpringEL)
-* [ ] File permissions are POSIX format
-* [ ] Override files use `.override.hbs` extension
-* [ ] Checksum index files are not corrupted
+- [ ] Java 21 or higher installed
+- [ ] Maven 3.9.4 or higher
+- [ ] YAML syntax is valid
+- [ ] Template files exist at specified paths
+- [ ] Helper classes are on classpath
+- [ ] Expression syntax is correct (SpringEL)
+- [ ] File permissions are POSIX format
+- [ ] Override files use `.override.hbs` extension
+- [ ] Checksum index files are not corrupted
 
-== API Reference
+## API Reference
 
-=== Core Classes
+### Core Classes
 
-[cols="2,3"]
-|===
-| Class | Description
+| Class | Description |
+|---|---|
+| `ModelGenerator` | Main entry point for generation. Static methods for generating files, managing checksums. |
+| `ModelGeneratorContext` | Container for generator state, Handlebars engine, SpringEL context, helpers. |
+| `GeneratorModel` | Represents template collection loaded from YAML. |
+| `GeneratorParameter` | Configuration for generation process (builder pattern). |
+| `GeneratorTemplate` | Single template configuration with expressions. |
+| `TemplateEvaulator` | Evaluates SpringEL expressions and applies Handlebars templates. |
 
-| `ModelGenerator`
-| Main entry point for generation. Static methods for generating files, managing checksums.
+### Key Methods
 
-| `ModelGeneratorContext`
-| Container for generator state, Handlebars engine, SpringEL context, helpers.
+#### ModelGenerator
 
-| `GeneratorModel`
-| Represents template collection loaded from YAML.
-
-| `GeneratorParameter`
-| Configuration for generation process (builder pattern).
-
-| `GeneratorTemplate`
-| Single template configuration with expressions.
-
-| `TemplateEvaulator`
-| Evaluates SpringEL expressions and applies Handlebars templates.
-|===
-
-=== Key Methods
-
-==== ModelGenerator
-
-[source,java]
-----
+```java
 // Generate files to directory
 public static void generateToDirectory(GeneratorParameter parameter)
 
@@ -1098,12 +939,11 @@ public static void cleanGeneratedFromChecksum(
 public static byte[] getGeneratedFilesAsZip(
     Collection<GeneratedFile> generatedFiles
 )
-----
+```
 
-==== GeneratorModel
+#### GeneratorModel
 
-[source,java]
-----
+```java
 // Load from YAML URL
 public static GeneratorModel loadYamlURL(URL url, Class<?> mixin)
 
@@ -1112,64 +952,41 @@ public void overrideTemplates(GeneratorModel override)
 
 // Builder pattern
 public static GeneratorModelBuilder generatorModelBuilder()
-----
+```
 
-==== GeneratorParameter.Builder
+#### GeneratorParameter.Builder
 
-[source,java]
-----
+```java
 GeneratorParameter param = GeneratorParameter.builder()
     .generatorContext(context)                    // Required
     .targetDirectory(new File("output/"))         // Optional
     .performExecutor(this::performGeneration)     // Optional
     .validateChecksum(true)                        // Optional, default: true
     .build();
-----
+```
 
-=== Annotations
+### Annotations
 
-[cols="2,3"]
-|===
-| Annotation | Usage
+| Annotation | Usage |
+|---|---|
+| `@TemplateHelper` | Mark helper class for automatic discovery |
+| `@ContextAccessor` | Enable template parameter access via ThreadLocal |
 
-| `@TemplateHelper`
-| Mark helper class for automatic discovery
+### Utility Classes
 
-| `@ContextAccessor`
-| Enable template parameter access via ThreadLocal
-|===
+| Class | Description |
+|---|---|
+| `ChecksumUtil` | MD5 checksum calculation |
+| `GeneratorIgnore` | GLOB-based file exclusion |
+| `ChecksumIgnore` | Checksum validation override |
+| `GitIgnoreSynchronizer` | Maintain `.gitignore` with generated files |
+| `ThreadLocalContextHolder` | Thread-safe parameter access for helpers |
+| `StringHelper` | Built-in string manipulation helpers |
+| `UriHelper` | URI manipulation utilities |
 
-=== Utility Classes
+## Best Practices
 
-[cols="2,3"]
-|===
-| Class | Description
-
-| `ChecksumUtil`
-| MD5 checksum calculation
-
-| `GeneratorIgnore`
-| GLOB-based file exclusion
-
-| `ChecksumIgnore`
-| Checksum validation override
-
-| `GitIgnoreSynchronizer`
-| Maintain `.gitignore` with generated files
-
-| `ThreadLocalContextHolder`
-| Thread-safe parameter access for helpers
-
-| `StringHelper`
-| Built-in string manipulation helpers
-
-| `UriHelper`
-| URI manipulation utilities
-|===
-
-== Best Practices
-
-=== Template Design
+### Template Design
 
 * ✅ **Keep templates simple**: One responsibility per template
 * ✅ **Use helpers**: Extract complex logic into helper methods
@@ -1177,7 +994,7 @@ GeneratorParameter param = GeneratorParameter.builder()
 * ✅ **Test incrementally**: Generate and verify output frequently
 * ✅ **Version templates**: Track template changes in version control
 
-=== Helper Classes
+### Helper Classes
 
 * ✅ **Single responsibility**: One helper class per domain (strings, dates, formatting)
 * ✅ **Null safety**: Always check for null inputs
@@ -1185,7 +1002,7 @@ GeneratorParameter param = GeneratorParameter.builder()
 * ✅ **Unit tests**: Test helpers independently
 * ✅ **Extend StaticMethodValueResolver**: Better method caching and resolution
 
-=== Expression Design
+### Expression Design
 
 * ✅ **Keep expressions simple**: Complex logic belongs in helpers
 * ✅ **Avoid side effects**: Expressions should be pure (no mutations)
@@ -1193,7 +1010,7 @@ GeneratorParameter param = GeneratorParameter.builder()
 * ✅ **Test expressions**: Verify in isolation before full generation
 * ✅ **Document complex expressions**: Add YAML comments
 
-=== File Organization
+### File Organization
 
 * ✅ **Consistent structure**: Organize templates by feature/module
 * ✅ **Naming conventions**: Use clear, descriptive template names
@@ -1201,7 +1018,7 @@ GeneratorParameter param = GeneratorParameter.builder()
 * ✅ **Version YAML**: Track configuration changes
 * ✅ **Document overrides**: Explain why overrides exist
 
-=== Generation Strategy
+### Generation Strategy
 
 * ✅ **Start small**: Begin with one template, add gradually
 * ✅ **Use checksums**: Enable validation to prevent accidents
@@ -1209,7 +1026,7 @@ GeneratorParameter param = GeneratorParameter.builder()
 * ✅ **Proper ignores**: Use `.generator-ignore` for manual files
 * ✅ **Clean builds**: Provide way to regenerate everything
 
-=== Performance
+### Performance
 
 * ✅ **Cache helpers**: Extend `StaticMethodValueResolver`
 * ✅ **Optimize expressions**: Avoid repeated expensive calls
@@ -1217,15 +1034,15 @@ GeneratorParameter param = GeneratorParameter.builder()
 * ✅ **Incremental updates**: Only regenerate changed files
 * ✅ **Profile if needed**: Use logging to identify bottlenecks
 
-== Examples
+## Examples
 
-=== Complete Example: REST API Generator
+### Complete Example: REST API Generator
 
 This example generates a complete REST API from a domain model.
 
-==== Project Structure
+#### Project Structure
 
-----
+```
 my-generator/
 ├── src/main/
 │   ├── java/
@@ -1242,33 +1059,32 @@ my-generator/
 │       │   ├── Service.java.hbs
 │       │   └── Controller.java.hbs
 │       └── project.yaml
-----
+```
 
-==== Generator Class
+#### Generator Class
 
-[source,java]
-----
+```java
 public class MyGenerator {
-
+    
     public static void generate(MyGeneratorParameter param) {
         // Load templates
         URL templatesUrl = MyGenerator.class.getResource("/templates");
         URL yamlUrl = MyGenerator.class.getResource("/project.yaml");
-
+        
         // Create template loader
-        ChainedURLTemplateLoader templateLoader =
+        ChainedURLTemplateLoader templateLoader = 
             ChainedURLTemplateLoader.createFromURIs(
                 List.of(templatesUrl.toURI())
             );
-
+        
         // Load generator model
         GeneratorModel model = GeneratorModel.loadYamlURL(yamlUrl, null);
-
+        
         // Find helpers
         Set<Class<?>> helpers = TemplateHelperFinder.collectHelpersAsClass(
             "com.example.generator.helpers"
         );
-
+        
         // Create context
         ModelGeneratorContext context = ModelGenerator.createGeneratorContext(
             templateLoader,
@@ -1278,7 +1094,7 @@ public class MyGenerator {
             Collections.emptySet(),
             null
         );
-
+        
         // Configure generation
         GeneratorParameter genParam = GeneratorParameter.builder()
             .generatorContext(context)
@@ -1286,38 +1102,37 @@ public class MyGenerator {
             .performExecutor(p -> performGeneration(p, param))
             .validateChecksum(true)
             .build();
-
+        
         // Generate
         ModelGenerator.generateToDirectory(genParam);
     }
-
+    
     private static GeneratorResult performGeneration(
-        GeneratorParameter p,
+        GeneratorParameter p, 
         MyGeneratorParameter param
     ) {
         GeneratorResult result = GeneratorResult.builder().build();
-
+        
         // Generate files for each entity
         for (Entity entity : param.getModel().getEntities()) {
             Map<String, Object> context = Map.of(
                 "model", param.getModel(),
                 "entity", entity
             );
-
+            
             result.getGenerated().addAll(
                 generateFilesForEntity(p.getGeneratorContext(), entity, context)
             );
         }
-
+        
         return result;
     }
 }
-----
+```
 
-==== YAML Configuration
+#### YAML Configuration
 
-[source,yaml]
-----
+```yaml
 permission: rw-r--r--
 
 templates:
@@ -1325,31 +1140,30 @@ templates:
   - name: entity
     templateName: Entity.java.hbs
     pathExpression: "'entities/' + #entity.name + '.java'"
-
+    
   # Repository interface
   - name: repository
     templateName: Repository.java.hbs
     pathExpression: "'repositories/' + #entity.name + 'Repository.java'"
-
+    
   # Service class
   - name: service
     templateName: Service.java.hbs
     pathExpression: "'services/' + #entity.name + 'Service.java'"
-
+    
   # REST Controller
   - name: controller
     templateName: Controller.java.hbs
     pathExpression: "'controllers/' + #entity.name + 'Controller.java'"
     conditionExpression: "#entity.hasRestApi()"
-----
+```
 
-==== Helper Class
+#### Helper Class
 
-[source,java]
-----
+```java
 @TemplateHelper
 public class RestHelper extends StaticMethodValueResolver {
-
+    
     public static String httpMethod(Object operation) {
         if (operation instanceof CreateOperation) return "POST";
         if (operation instanceof ReadOperation) return "GET";
@@ -1357,17 +1171,16 @@ public class RestHelper extends StaticMethodValueResolver {
         if (operation instanceof DeleteOperation) return "DELETE";
         return "GET";
     }
-
+    
     public static String pathParam(Object property) {
         return "{" + property.toString() + "}";
     }
 }
-----
+```
 
-==== Template
+#### Template
 
-[source,handlebars]
-----
+```handlebars
 // Controller.java.hbs
 package {{packageName}}.controllers;
 
@@ -1377,13 +1190,13 @@ import {{packageName}}.services.{{entity.name}}Service;
 @RestController
 @RequestMapping("/api/{{lowerCase entity.name}}s")
 public class {{entity.name}}Controller {
-
+    
     private final {{entity.name}}Service service;
-
+    
     public {{entity.name}}Controller({{entity.name}}Service service) {
         this.service = service;
     }
-
+    
     {{#each entity.operations}}
     @{{httpMethod this}}Mapping{{#if hasPathParams}}("{{pathExpression}}"){{/if}}
     public {{returnType}} {{name}}({{parameters}}) {
@@ -1391,39 +1204,33 @@ public class {{entity.name}}Controller {
     }
     {{/each}}
 }
-----
+```
 
-== Contributing
+## Contributing
 
-We welcome contributions! Please see link:CONTRIBUTING.adoc[CONTRIBUTING.adoc] for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.adoc](CONTRIBUTING.adoc) for guidelines.
 
-=== Development Setup
+### Development Setup
 
-. Clone the repository:
-+
-[source,bash]
-----
-git clone https://github.com/BlackBeltTechnology/judo-generator-commons.git
-cd judo-generator-commons
-----
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/BlackBeltTechnology/judo-generator-commons.git
+   cd judo-generator-commons
+   ```
 
-. Build the project:
-+
-[source,bash]
-----
-mvn clean install
-----
+2. Build the project:
+   ```bash
+   mvn clean install
+   ```
 
-. Run tests:
-+
-[source,bash]
-----
-mvn test
-----
+3. Run tests:
+   ```bash
+   mvn test
+   ```
 
-=== Reporting Issues
+### Reporting Issues
 
-Please report issues on https://github.com/BlackBeltTechnology/judo-generator-commons/issues[GitHub Issues].
+Please report issues on [GitHub Issues](https://github.com/BlackBeltTechnology/judo-generator-commons/issues).
 
 Include:
 
@@ -1433,32 +1240,32 @@ Include:
 * Minimal reproducible example
 * Expected vs. actual behavior
 
-== License
+## License
 
-This project is licensed under the Eclipse Public License 2.0. See link:LICENSE.txt[LICENSE.txt] for details.
+This project is licensed under the Eclipse Public License 2.0. See [LICENSE.txt](LICENSE.txt) for details.
 
-== Resources
+## Resources
 
-=== Documentation
+### Documentation
 
-* link:AGENTS.md[AGENTS.md] - Comprehensive guide for AI assistants and developers
-* link:CONTRIBUTING.adoc[CONTRIBUTING.adoc] - Contribution guidelines
-* https://github.com/BlackBeltTechnology/judo-generator-commons[GitHub Repository]
+* [AGENTS.md](AGENTS.md) - Comprehensive guide for AI assistants and developers
+* [CONTRIBUTING.adoc](CONTRIBUTING.adoc) - Contribution guidelines
+* [GitHub Repository](https://github.com/BlackBeltTechnology/judo-generator-commons)
 
-=== Related Projects
+### Related Projects
 
-* https://github.com/BlackBeltTechnology/judo-meta-esm[JUDO Meta ESM]
-* https://github.com/BlackBeltTechnology/judo-meta-pam[JUDO Meta PAM]
-* https://github.com/BlackBeltTechnology/judo-meta-ui[JUDO Meta UI]
+* [JUDO Meta ESM](https://github.com/BlackBeltTechnology/judo-meta-esm)
+* [JUDO Meta PAM](https://github.com/BlackBeltTechnology/judo-meta-pam)
+* [JUDO Meta UI](https://github.com/BlackBeltTechnology/judo-meta-ui)
 
-=== External Documentation
+### External Documentation
 
-* https://github.com/jknack/handlebars.java[Handlebars.java Documentation]
-* https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#expressions[Spring Expression Language Reference]
-* https://github.com/FasterXML/jackson-dataformats-text[Jackson YAML Documentation]
-* https://www.eclipse.org/legal/epl-2.0/[Eclipse Public License 2.0]
+* [Handlebars.java Documentation](https://github.com/jknack/handlebars.java)
+* [Spring Expression Language Reference](https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#expressions)
+* [Jackson YAML Documentation](https://github.com/FasterXML/jackson-dataformats-text)
+* [Eclipse Public License 2.0](https://www.eclipse.org/legal/epl-2.0/)
 
-== Support
+## Support
 
 For questions and support:
 
