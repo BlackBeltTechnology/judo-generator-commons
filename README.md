@@ -113,6 +113,507 @@ GeneratorParameter param = GeneratorParameter.builder()
 ModelGenerator.generateToDirectory(param);
 ```
 
+## Architecture & Generation Flow
+
+This section provides detailed diagrams of the generation workflow and key functions.
+
+### High-Level Architecture
+
+```mermaid
+graph TB
+    subgraph "Input Layer"
+        YAML[YAML Template Descriptor]
+        HBS[Handlebars Templates]
+        MODEL[Meta-Model]
+        HELPERS[Helper Classes]
+    end
+    
+    subgraph "Core Framework"
+        GMC[ModelGeneratorContext]
+        GM[GeneratorModel]
+        GT[GeneratorTemplate]
+        TE[TemplateEvaluator]
+    end
+    
+    subgraph "Processing Engine"
+        MG[ModelGenerator]
+        GF[generateFile]
+        WD[writeDirectory]
+    end
+    
+    subgraph "Output Layer"
+        FILES[Generated Files]
+        CHECKSUM[.generated-files]
+        IGNORE[.generator-ignore]
+    end
+    
+    YAML --> GM
+    HBS --> GMC
+    MODEL --> MG
+    HELPERS --> GMC
+    
+    GM --> GT
+    GT --> TE
+    GMC --> MG
+    
+    MG --> GF
+    GF --> WD
+    
+    WD --> FILES
+    WD --> CHECKSUM
+    IGNORE -.-> WD
+    
+    style MG fill:#e1f5ff
+    style GMC fill:#e1f5ff
+    style WD fill:#ffe1e1
+    style FILES fill:#e1ffe1
+```
+
+### Complete Generation Workflow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant ModelGenerator
+    participant GeneratorContext
+    participant GeneratorModel
+    participant TemplateEvaluator
+    participant Handlebars
+    participant FileSystem
+    
+    Client->>ModelGenerator: generateToDirectory(GeneratorParameter)
+    activate ModelGenerator
+    
+    ModelGenerator->>GeneratorContext: Retrieve context
+    GeneratorContext-->>ModelGenerator: Context with helpers, templates
+    
+    ModelGenerator->>ModelGenerator: performExecutor.apply(parameter)
+    
+    loop For each template
+        ModelGenerator->>GeneratorModel: Get template configuration
+        GeneratorModel-->>ModelGenerator: GeneratorTemplate
+        
+        ModelGenerator->>TemplateEvaluator: Create evaluator
+        TemplateEvaluator->>TemplateEvaluator: Parse SpringEL expressions
+        
+        alt actorTypeBased == true
+            loop For each actor
+                ModelGenerator->>TemplateEvaluator: Evaluate with actor context
+                TemplateEvaluator->>Handlebars: Apply template
+                Handlebars-->>TemplateEvaluator: Generated content
+                TemplateEvaluator-->>ModelGenerator: GeneratedFile
+            end
+        else factoryExpression exists
+            TemplateEvaluator->>TemplateEvaluator: Evaluate factory expression
+            loop For each factory result
+                TemplateEvaluator->>Handlebars: Apply template
+                Handlebars-->>TemplateEvaluator: Generated content
+                TemplateEvaluator-->>ModelGenerator: GeneratedFile
+            end
+        else simple template
+            TemplateEvaluator->>Handlebars: Apply template once
+            Handlebars-->>TemplateEvaluator: Generated content
+            TemplateEvaluator-->>ModelGenerator: GeneratedFile
+        end
+    end
+    
+    ModelGenerator->>ModelGenerator: writeDirectory(files, targetDir)
+    
+    ModelGenerator->>FileSystem: Read .generated-files (checksums)
+    FileSystem-->>ModelGenerator: Saved checksums
+    
+    ModelGenerator->>FileSystem: Calculate current checksums
+    FileSystem-->>ModelGenerator: Current checksums
+    
+    ModelGenerator->>ModelGenerator: Compare checksums
+    
+    alt Checksum mismatch & validateChecksum
+        ModelGenerator-->>Client: throw IllegalStateException
+    else Files need update
+        loop For each file to write
+            ModelGenerator->>FileSystem: Write file with permissions
+            FileSystem-->>ModelGenerator: Success
+        end
+        
+        ModelGenerator->>FileSystem: Update .generated-files
+        FileSystem-->>ModelGenerator: Success
+    end
+    
+    ModelGenerator-->>Client: Generation complete
+    deactivate ModelGenerator
+```
+
+### generateFile() Function Flow
+
+```mermaid
+flowchart TD
+    Start([generateFile called]) --> EvalCond{Evaluate<br/>condition<br/>expression?}
+    
+    EvalCond -->|Yes| CheckCond[Evaluate conditionExpression]
+    EvalCond -->|No| SetCondTrue[condition = true]
+    
+    CheckCond --> CondResult{Result?}
+    CondResult -->|false| SetCondFalse[Set condition = false]
+    CondResult -->|true| SetCondTrue
+    
+    SetCondTrue --> EvalPath[Evaluate pathExpression]
+    SetCondFalse --> EvalPath
+    
+    EvalPath --> SetPath[Set file path]
+    
+    SetPath --> CopyMode{copy mode?}
+    
+    CopyMode -->|Yes| LoadBinary[Load template as binary]
+    LoadBinary --> CopyContent[Set content = binary data]
+    
+    CopyMode -->|No| BuildContext[Build Handlebars Context]
+    BuildContext --> BindContext[Bind context via contextAccessor]
+    BindContext --> ApplyTemplate[Apply Handlebars template]
+    ApplyTemplate --> SetContent[Set content = template result]
+    
+    CopyContent --> CheckPerm{Template has<br/>permission?}
+    SetContent --> CheckPerm
+    
+    CheckPerm -->|Yes| UseTmplPerm[Use template permission]
+    CheckPerm -->|No| CheckGlobalPerm{Model has<br/>global permission?}
+    
+    CheckGlobalPerm -->|Yes| UseGlobalPerm[Use global permission]
+    CheckGlobalPerm -->|No| NoPerm[No permissions set]
+    
+    UseTmplPerm --> ParsePerm[Parse POSIX permissions]
+    UseGlobalPerm --> ParsePerm
+    
+    ParsePerm --> SetPerm[Set PosixFilePermissions]
+    
+    SetPerm --> Return([Return GeneratedFile])
+    NoPerm --> Return
+    
+    style Start fill:#e1f5ff
+    style Return fill:#e1ffe1
+    style EvalCond fill:#fff4e1
+    style CopyMode fill:#fff4e1
+    style CheckPerm fill:#fff4e1
+```
+
+### writeDirectory() Function Flow
+
+```mermaid
+flowchart TD
+    Start([writeDirectory called]) --> Filter[Filter files by condition]
+    
+    Filter --> InitIgnore[Initialize GeneratorIgnore<br/>& ChecksumIgnore]
+    
+    InitIgnore --> CalcNew[Calculate checksums<br/>for new files]
+    CalcNew --> ReadSaved[Read saved .generated-files]
+    ReadSaved --> ReadFS[Read filesystem checksums]
+    
+    ReadFS --> CreateMaps[Create Map objects:<br/>- generatorFileMap<br/>- savedFileMap<br/>- filesystemFileMap]
+    
+    CreateMaps --> DeleteOld{Files in filesystem<br/>but not in generator?}
+    
+    DeleteOld -->|Yes| CheckIgnoreDel{In .generator-ignore?}
+    DeleteOld -->|No| Validate
+    
+    CheckIgnoreDel -->|No| DeleteFile[Delete file]
+    CheckIgnoreDel -->|Yes| KeepFile1[Keep file]
+    
+    DeleteFile --> Validate{validateChecksum<br/>enabled?}
+    KeepFile1 --> Validate
+    
+    Validate -->|Yes| CheckMismatch{Checksum<br/>mismatch in<br/>filesystem?}
+    Validate -->|No| PrepareWrite
+    
+    CheckMismatch -->|Yes| CheckCsumIgnore{In .generator-<br/>checksum-ignore?}
+    CheckMismatch -->|No| PrepareWrite
+    
+    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-<br/>ignore?}
+    CheckCsumIgnore -->|Yes| PrepareWrite
+    
+    CheckGenIgnore -->|No| ThrowError[Throw IllegalStateException:<br/>Manual changes detected]
+    CheckGenIgnore -->|Yes| PrepareWrite[Prepare files to write]
+    
+    PrepareWrite --> FilterWrite{Need to write?<br/>- Not in filesystem<br/>- Not in saved<br/>- Checksum differs}
+    
+    FilterWrite -->|Yes| CheckIgnoreWrite{In .generator-<br/>ignore?}
+    FilterWrite -->|No| UpdateIndex
+    
+    CheckIgnoreWrite -->|No| WriteFile[Write file to filesystem]
+    CheckIgnoreWrite -->|Yes| SkipFile[Skip writing]
+    
+    WriteFile --> SetPerm{Has<br/>permissions?}
+    
+    SetPerm -->|Yes| ApplyPOSIX[Apply POSIX permissions]
+    SetPerm -->|No| NextFile
+    
+    ApplyPOSIX --> NextFile{More files?}
+    SkipFile --> NextFile
+    
+    NextFile -->|Yes| FilterWrite
+    NextFile -->|No| UpdateIndex[Update .generated-files<br/>with new checksums]
+    
+    UpdateIndex --> End([Complete])
+    ThrowError --> ErrorEnd([Error: Manual changes])
+    
+    style Start fill:#e1f5ff
+    style End fill:#e1ffe1
+    style ErrorEnd fill:#ffe1e1
+    style Validate fill:#fff4e1
+    style CheckMismatch fill:#fff4e1
+    style FilterWrite fill:#fff4e1
+```
+
+### Expression Evaluation Flow
+
+```mermaid
+flowchart TD
+    Start([Expression in YAML]) --> ParseYAML[Parse YAML configuration]
+    
+    ParseYAML --> CreateTE[Create TemplateEvaluator]
+    
+    CreateTE --> ParseExpr[Parse SpringEL expressions]
+    
+    ParseExpr --> FactoryExpr{Has<br/>factoryExpression?}
+    FactoryExpr -->|Yes| ParseFactory[Parse factory expression]
+    FactoryExpr -->|No| PathExpr
+    
+    ParseFactory --> PathExpr{Has<br/>pathExpression?}
+    PathExpr -->|Yes| ParsePath[Parse path expression]
+    PathExpr -->|No| CondExpr
+    
+    ParsePath --> CondExpr{Has<br/>conditionExpression?}
+    CondExpr -->|Yes| ParseCond[Parse condition expression]
+    CondExpr -->|No| TmplCtx
+    
+    ParseCond --> TmplCtx{Has<br/>templateContext?}
+    TmplCtx -->|Yes| ParseContext[Parse context expressions]
+    TmplCtx -->|No| CreateCtx
+    
+    ParseContext --> CreateCtx[Create StandardEvaluationContext]
+    
+    CreateCtx --> SetVars[Set variables:<br/>- #self<br/>- #model<br/>- #actorType]
+    
+    SetVars --> RegHelpers[Register helper methods<br/>as SpringEL functions]
+    
+    RegHelpers --> EvalFactory{Evaluate<br/>factoryExpression?}
+    
+    EvalFactory -->|Yes| GetCollection[Get collection result]
+    EvalFactory -->|No| EvalPath
+    
+    GetCollection --> LoopItems[Loop through items]
+    LoopItems --> SetSelf[Set #self = current item]
+    SetSelf --> EvalPath
+    
+    EvalPath[Evaluate pathExpression] --> GetPath[Get file path string]
+    
+    GetPath --> EvalCond{Evaluate<br/>conditionExpression?}
+    
+    EvalCond -->|Yes| GetBool[Get boolean result]
+    EvalCond -->|No| BuildHBS
+    
+    GetBool --> CheckBool{Result<br/>== true?}
+    CheckBool -->|Yes| BuildHBS
+    CheckBool -->|No| SkipGen[Skip generation]
+    
+    BuildHBS[Build Handlebars Context] --> AddCtxVars[Add templateContext variables]
+    
+    AddCtxVars --> BindCtx[Bind context to ThreadLocal]
+    
+    BindCtx --> ApplyTmpl[Apply Handlebars template]
+    
+    ApplyTmpl --> Return([Return generated content])
+    SkipGen --> Return
+    
+    style Start fill:#e1f5ff
+    style Return fill:#e1ffe1
+    style FactoryExpr fill:#fff4e1
+    style PathExpr fill:#fff4e1
+    style CondExpr fill:#fff4e1
+    style TmplCtx fill:#fff4e1
+```
+
+### Helper Method Resolution
+
+```mermaid
+flowchart TD
+    Start([Helper method called]) --> InTemplate{Called from<br/>template or<br/>SpringEL?}
+    
+    InTemplate -->|Template| HBS[Handlebars invocation]
+    InTemplate -->|SpringEL| SPEL[SpringEL function call]
+    
+    HBS --> FindHelper[Find @TemplateHelper class]
+    SPEL --> FindHelper
+    
+    FindHelper --> CheckCache{Method in<br/>cache?}
+    
+    CheckCache -->|Yes| GetCached[Get cached Method]
+    CheckCache -->|No| ScanClass[Scan class for public static methods]
+    
+    ScanClass --> FilterSig[Filter by signature:<br/>- 0 or 1 parameter<br/>- Non-void return]
+    
+    FilterSig --> CacheMethod[Cache method reference]
+    
+    CacheMethod --> GetCached
+    
+    GetCached --> CheckParams{Method has<br/>parameter?}
+    
+    CheckParams -->|Yes| InvokeWithParam[Invoke with argument]
+    CheckParams -->|No| InvokeNoParam[Invoke without argument]
+    
+    InvokeWithParam --> CheckContext{Has<br/>@ContextAccessor?}
+    InvokeNoParam --> CheckContext
+    
+    CheckContext -->|Yes| BindTL[Bind context to ThreadLocal]
+    CheckContext -->|No| Execute
+    
+    BindTL --> Execute[Execute method]
+    
+    Execute --> GetResult[Get return value]
+    
+    GetResult --> UnbindTL{Needs<br/>unbind?}
+    
+    UnbindTL -->|Yes| CleanTL[Clean ThreadLocal]
+    UnbindTL -->|No| Return
+    
+    CleanTL --> Return([Return result])
+    
+    style Start fill:#e1f5ff
+    style Return fill:#e1ffe1
+    style InTemplate fill:#fff4e1
+    style CheckCache fill:#fff4e1
+    style CheckParams fill:#fff4e1
+```
+
+### Checksum Validation Flow
+
+```mermaid
+flowchart TD
+    Start([Start validation]) --> ReadSaved[Read .generated-files]
+    
+    ReadSaved --> ParseSaved[Parse saved checksums:<br/>path,md5hash]
+    
+    ParseSaved --> ReadFS[Scan filesystem files]
+    
+    ReadFS --> CalcFS[Calculate MD5 for each file]
+    
+    CalcFS --> Compare{For each file<br/>in saved list}
+    
+    Compare --> FileExists{File exists<br/>in filesystem?}
+    
+    FileExists -->|No| MissingOK[OK - Will be regenerated]
+    FileExists -->|Yes| CompareHash{Saved hash ==<br/>Filesystem hash?}
+    
+    CompareHash -->|Yes| MatchOK[OK - No changes]
+    CompareHash -->|No| CheckCsumIgnore{In .generator-<br/>checksum-ignore?}
+    
+    CheckCsumIgnore -->|Yes| IgnoreOK[OK - Intentionally modified]
+    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-<br/>ignore?}
+    
+    CheckGenIgnore -->|Yes| GenIgnoreOK[OK - Excluded from generation]
+    CheckGenIgnore -->|No| ManualChange[MISMATCH - Manual change detected]
+    
+    ManualChange --> CollectErrors[Add to error list]
+    
+    MissingOK --> NextFile{More files?}
+    MatchOK --> NextFile
+    IgnoreOK --> NextFile
+    GenIgnoreOK --> NextFile
+    CollectErrors --> NextFile
+    
+    NextFile -->|Yes| Compare
+    NextFile -->|No| HasErrors{Errors found?}
+    
+    HasErrors -->|Yes| ThrowException[Throw IllegalStateException<br/>with error list]
+    HasErrors -->|No| Success([Validation passed])
+    
+    ThrowException --> Error([Error: Manual changes])
+    
+    style Start fill:#e1f5ff
+    style Success fill:#e1ffe1
+    style Error fill:#ffe1e1
+    style CompareHash fill:#fff4e1
+    style HasErrors fill:#fff4e1
+```
+
+### Actor-Based Generation Flow
+
+```mermaid
+flowchart TD
+    Start([Start generation]) --> CheckActorBased{Template has<br/>actorTypeBased=true?}
+    
+    CheckActorBased -->|No| NormalFlow[Normal single generation]
+    CheckActorBased -->|Yes| GetActors[Get all actor types from model]
+    
+    GetActors --> FilterActors[Apply actorTypePredicate filter]
+    
+    FilterActors --> LoopActors{For each<br/>actor type}
+    
+    LoopActors --> SetActorCtx[Set context:<br/>- #actorType = current actor<br/>- #self = current actor]
+    
+    SetActorCtx --> EvalGuard{Has context<br/>guard?}
+    
+    EvalGuard -->|Yes| CheckGuard{Guard<br/>passes?}
+    EvalGuard -->|No| EvalConstraints
+    
+    CheckGuard -->|No| SkipActor[Skip all constraints for actor]
+    CheckGuard -->|Yes| EvalConstraints
+    
+    EvalConstraints --> LoopTemplates{For each<br/>template}
+    
+    LoopTemplates --> HasTmplGuard{Has template<br/>guard?}
+    
+    HasTmplGuard -->|Yes| CheckTmplGuard{Guard<br/>passes?}
+    HasTmplGuard -->|No| GenFile
+    
+    CheckTmplGuard -->|No| SkipTemplate[Skip template]
+    CheckTmplGuard -->|Yes| GenFile[Generate file]
+    
+    GenFile --> ResolveDir[Resolve target directory:<br/>actorTypeTargetDirectoryResolver]
+    
+    ResolveDir --> AddToResult[Add to GeneratorResult<br/>generatedByDiscriminator[actor]]
+    
+    AddToResult --> NextTemplate{More templates?}
+    SkipTemplate --> NextTemplate
+    
+    NextTemplate -->|Yes| LoopTemplates
+    NextTemplate -->|No| NextActor{More actors?}
+    
+    SkipActor --> NextActor
+    NextActor -->|Yes| LoopActors
+    NextActor -->|No| WriteActorFiles
+    
+    WriteActorFiles --> LoopActorResults{For each actor<br/>result}
+    
+    LoopActorResults --> WriteActorDir[Write to actor directory:<br/>.generated-files-[actorName]]
+    
+    WriteActorDir --> NextActorResult{More actor<br/>results?}
+    
+    NextActorResult -->|Yes| LoopActorResults
+    NextActorResult -->|No| End
+    
+    NormalFlow --> WriteCommon[Write to common directory:<br/>.generated-files]
+    
+    WriteCommon --> End([Complete])
+    
+    style Start fill:#e1f5ff
+    style End fill:#e1ffe1
+    style CheckActorBased fill:#fff4e1
+    style EvalGuard fill:#fff4e1
+    style HasTmplGuard fill:#fff4e1
+```
+
+### Key Architecture Components
+
+| Component | Responsibility | Key Methods |
+|---|---|---|
+| `ModelGenerator` | Central orchestrator for generation workflow | `generateToDirectory()`, `writeDirectory()`, `generateFile()` |
+| `ModelGeneratorContext` | State management and engine configuration | `createHandlebars()`, `createSpringEvaluationContext()` |
+| `GeneratorModel` | Template collection loaded from YAML | `loadYamlURL()`, `overrideTemplates()` |
+| `GeneratorTemplate` | Single template configuration with expressions | `evalToContextBuilder()` |
+| `TemplateEvaluator` | Evaluates SpringEL expressions and applies templates | `getFactoryExpressionResultOrValue()` |
+| `GeneratorIgnore` | GLOB-based file exclusion | `shouldExcludeFile()` |
+| `ChecksumUtil` | MD5 checksum calculation | `getMD5()` |
+| `GitIgnoreSynchronizer` | Maintains .gitignore with generated files | `addGeneratedFiles()` |
+
 ## Template Configuration
 
 ### YAML Descriptor Structure
