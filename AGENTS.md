@@ -16,7 +16,7 @@ This document provides comprehensive guidance for AI coding assistants working o
 
 ### Meta-Models Using This Framework
 - judo-meta-esm (ESM Generator)
-- judo-meta-pam (PAM Generator)  
+- judo-meta-pam (PSM Generator)  
 - judo-meta-ui (UI Generator)
 
 Each meta-model has three related modules:

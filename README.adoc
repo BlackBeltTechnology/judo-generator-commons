@@ -246,7 +246,7 @@ sequenceDiagram
 [mermaid]
 ----
 flowchart TD
-    Start([generateFile called]) --> EvalCond{Evaluate\ncondition\nexpression?}
+    Start([generateFile called]) --> EvalCond{Evaluate condition expression?}
 
     EvalCond -->|Yes| CheckCond[Evaluate conditionExpression]
     EvalCond -->|No| SetCondTrue[condition = true]
@@ -270,11 +270,11 @@ flowchart TD
     BindContext --> ApplyTemplate[Apply Handlebars template]
     ApplyTemplate --> SetContent[Set content = template result]
 
-    CopyContent --> CheckPerm{Template has\npermission?}
+    CopyContent --> CheckPerm{Template has permission?}
     SetContent --> CheckPerm
 
     CheckPerm -->|Yes| UseTmplPerm[Use template permission]
-    CheckPerm -->|No| CheckGlobalPerm{Model has\nglobal permission?}
+    CheckPerm -->|No| CheckGlobalPerm{Model has global permission?}
 
     CheckGlobalPerm -->|Yes| UseGlobalPerm[Use global permission]
     CheckGlobalPerm -->|No| NoPerm[No permissions set]
@@ -309,7 +309,7 @@ flowchart TD
 
     ReadFS --> CreateMaps[Create Map objects:\n- generatorFileMap\n- savedFileMap\n- filesystemFileMap]
 
-    CreateMaps --> DeleteOld{Files in filesystem\nbut not in generator?}
+    CreateMaps --> DeleteOld{Files in filesystem but not in generator?}
 
     DeleteOld -->|Yes| CheckIgnoreDel{In .generator-ignore?}
     DeleteOld -->|No| Validate
@@ -317,30 +317,30 @@ flowchart TD
     CheckIgnoreDel -->|No| DeleteFile[Delete file]
     CheckIgnoreDel -->|Yes| KeepFile1[Keep file]
 
-    DeleteFile --> Validate{validateChecksum\nenabled?}
+    DeleteFile --> Validate{validateChecksum enabled?}
     KeepFile1 --> Validate
 
-    Validate -->|Yes| CheckMismatch{Checksum\nmismatch in\nfilesystem?}
+    Validate -->|Yes| CheckMismatch{Checksum mismatch in filesystem?}
     Validate -->|No| PrepareWrite
 
-    CheckMismatch -->|Yes| CheckCsumIgnore{In .generator-\nchecksum-ignore?}
+    CheckMismatch -->|Yes| CheckCsumIgnore{In .generator-checksum-ignore?}
     CheckMismatch -->|No| PrepareWrite
 
-    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-\nignore?}
+    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-ignore?}
     CheckCsumIgnore -->|Yes| PrepareWrite
 
     CheckGenIgnore -->|No| ThrowError[Throw IllegalStateException:\nManual changes detected]
     CheckGenIgnore -->|Yes| PrepareWrite[Prepare files to write]
 
-    PrepareWrite --> FilterWrite{Need to write?\n- Not in filesystem\n- Not in saved\n- Checksum differs}
+    PrepareWrite --> FilterWrite{Need to write?}
 
-    FilterWrite -->|Yes| CheckIgnoreWrite{In .generator-\nignore?}
+    FilterWrite -->|Yes| CheckIgnoreWrite{In .generator-ignore?}
     FilterWrite -->|No| UpdateIndex
 
     CheckIgnoreWrite -->|No| WriteFile[Write file to filesystem]
     CheckIgnoreWrite -->|Yes| SkipFile[Skip writing]
 
-    WriteFile --> SetPerm{Has\npermissions?}
+    WriteFile --> SetPerm{Has permissions?}
 
     SetPerm -->|Yes| ApplyPOSIX[Apply POSIX permissions]
     SetPerm -->|No| NextFile
@@ -373,19 +373,19 @@ flowchart TD
 
     CreateTE --> ParseExpr[Parse SpringEL expressions]
 
-    ParseExpr --> FactoryExpr{Has\nfactoryExpression?}
+    ParseExpr --> FactoryExpr{Has factoryExpression?}
     FactoryExpr -->|Yes| ParseFactory[Parse factory expression]
     FactoryExpr -->|No| PathExpr
 
-    ParseFactory --> PathExpr{Has\npathExpression?}
+    ParseFactory --> PathExpr{Has pathExpression?}
     PathExpr -->|Yes| ParsePath[Parse path expression]
     PathExpr -->|No| CondExpr
 
-    ParsePath --> CondExpr{Has\nconditionExpression?}
+    ParsePath --> CondExpr{Has conditionExpression?}
     CondExpr -->|Yes| ParseCond[Parse condition expression]
     CondExpr -->|No| TmplCtx
 
-    ParseCond --> TmplCtx{Has\ntemplateContext?}
+    ParseCond --> TmplCtx{Has templateContext?}
     TmplCtx -->|Yes| ParseContext[Parse context expressions]
     TmplCtx -->|No| CreateCtx
 
@@ -395,7 +395,7 @@ flowchart TD
 
     SetVars --> RegHelpers[Register helper methods\nas SpringEL functions]
 
-    RegHelpers --> EvalFactory{Evaluate\nfactoryExpression?}
+    RegHelpers --> EvalFactory{Evaluate factoryExpression?}
 
     EvalFactory -->|Yes| GetCollection[Get collection result]
     EvalFactory -->|No| EvalPath
@@ -406,12 +406,12 @@ flowchart TD
 
     EvalPath[Evaluate pathExpression] --> GetPath[Get file path string]
 
-    GetPath --> EvalCond{Evaluate\nconditionExpression?}
+    GetPath --> EvalCond{Evaluate conditionExpression?}
 
     EvalCond -->|Yes| GetBool[Get boolean result]
     EvalCond -->|No| BuildHBS
 
-    GetBool --> CheckBool{Result\n== true?}
+    GetBool --> CheckBool{Result == true?}
     CheckBool -->|Yes| BuildHBS
     CheckBool -->|No| SkipGen[Skip generation]
 
@@ -437,7 +437,7 @@ flowchart TD
 [mermaid]
 ----
 flowchart TD
-    Start([Helper method called]) --> InTemplate{Called from\ntemplate or\nSpringEL?}
+    Start([Helper method called]) --> InTemplate{Called from template or SpringEL?}
 
     InTemplate -->|Template| HBS[Handlebars invocation]
     InTemplate -->|SpringEL| SPEL[SpringEL function call]
@@ -445,7 +445,7 @@ flowchart TD
     HBS --> FindHelper[Find @TemplateHelper class]
     SPEL --> FindHelper
 
-    FindHelper --> CheckCache{Method in\ncache?}
+    FindHelper --> CheckCache{Method in cache?}
 
     CheckCache -->|Yes| GetCached[Get cached Method]
     CheckCache -->|No| ScanClass[Scan class for public static methods]
@@ -456,12 +456,12 @@ flowchart TD
 
     CacheMethod --> GetCached
 
-    GetCached --> CheckParams{Method has\nparameter?}
+    GetCached --> CheckParams{Method has parameter?}
 
     CheckParams -->|Yes| InvokeWith[Invoke with argument]
     CheckParams -->|No| InvokeNo[Invoke without argument]
 
-    InvokeWith --> CheckContext{Has\n@ContextAccessor?}
+    InvokeWith --> CheckContext{Has @ContextAccessor?}
     InvokeNo --> CheckContext
 
     CheckContext -->|Yes| BindTL[Bind context to ThreadLocal]
@@ -471,7 +471,7 @@ flowchart TD
 
     Execute --> GetResult[Get return value]
 
-    GetResult --> UnbindTL{Needs\nunbind?}
+    GetResult --> UnbindTL{Needs unbind?}
 
     UnbindTL -->|Yes| CleanTL[Clean ThreadLocal]
     UnbindTL -->|No| Return
@@ -498,18 +498,18 @@ flowchart TD
 
     ReadFS --> CalcFS[Calculate MD5 for each file]
 
-    CalcFS --> Compare{For each file\nin saved list}
+    CalcFS --> Compare{For each file in saved list}
 
-    Compare --> FileExists{File exists\nin filesystem?}
+    Compare --> FileExists{File exists in filesystem?}
 
     FileExists -->|No| MissingOK[OK - Will be regenerated]
-    FileExists -->|Yes| CompareHash{Saved hash ==\nFilesystem hash?}
+    FileExists -->|Yes| CompareHash{Saved hash == Filesystem hash?}
 
     CompareHash -->|Yes| MatchOK[OK - No changes]
-    CompareHash -->|No| CheckCsumIgnore{In .generator-\nchecksum-ignore?}
+    CompareHash -->|No| CheckCsumIgnore{In .generator-checksum-ignore?}
 
     CheckCsumIgnore -->|Yes| IgnoreOK[OK - Intentionally modified]
-    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-\nignore?}
+    CheckCsumIgnore -->|No| CheckGenIgnore{In .generator-ignore?}
 
     CheckGenIgnore -->|Yes| GenIgnoreOK[OK - Excluded from generation]
     CheckGenIgnore -->|No| ManualChange[MISMATCH - Manual change detected]
@@ -542,38 +542,38 @@ flowchart TD
 [mermaid]
 ----
 flowchart TD
-    Start([Start generation]) --> CheckActorBased{Template has\nactorTypeBased=true?}
+    Start([Start generation]) --> CheckActorBased{Template has actorTypeBased=true?}
 
     CheckActorBased -->|No| NormalFlow[Normal single generation]
     CheckActorBased -->|Yes| GetActors[Get all actor types from model]
 
     GetActors --> FilterActors[Apply actorTypePredicate filter]
 
-    FilterActors --> LoopActors{For each\nactor type}
+    FilterActors --> LoopActors{For each actor type}
 
-    LoopActors --> SetActorCtx[Set context:\n- #actorType = current actor\n- #self = current actor]
+    LoopActors --> SetActorCtx[Set context variables]
 
-    SetActorCtx --> EvalGuard{Has context\nguard?}
+    SetActorCtx --> EvalGuard{Has context guard?}
 
-    EvalGuard -->|Yes| CheckGuard{Guard\npasses?}
+    EvalGuard -->|Yes| CheckGuard{Guard passes?}
     EvalGuard -->|No| EvalConstraints
 
     CheckGuard -->|No| SkipActor[Skip all constraints for actor]
     CheckGuard -->|Yes| EvalConstraints
 
-    EvalConstraints --> LoopTemplates{For each\ntemplate}
+    EvalConstraints --> LoopTemplates{For each template}
 
-    LoopTemplates --> HasTmplGuard{Has template\nguard?}
+    LoopTemplates --> HasTmplGuard{Has template guard?}
 
-    HasTmplGuard -->|Yes| CheckTmplGuard{Guard\npasses?}
+    HasTmplGuard -->|Yes| CheckTmplGuard{Guard passes?}
     HasTmplGuard -->|No| GenFile
 
     CheckTmplGuard -->|No| SkipTemplate[Skip template]
     CheckTmplGuard -->|Yes| GenFile[Generate file]
 
-    GenFile --> ResolveDir[Resolve target directory:\nactorTypeTargetDirectoryResolver]
+    GenFile --> ResolveDir[Resolve target directory]
 
-    ResolveDir --> AddToResult[Add to GeneratorResult\ngeneratedByDiscriminator[actor]]
+    ResolveDir --> AddToResult[Add to GeneratorResult per actor]
 
     AddToResult --> NextTemplate{More templates?}
     SkipTemplate --> NextTemplate
@@ -585,11 +585,11 @@ flowchart TD
     NextActor -->|Yes| LoopActors
     NextActor -->|No| WriteActorFiles
 
-    WriteActorFiles --> LoopActorResults{For each actor\nresult}
+    WriteActorFiles --> LoopActorResults{For each actor result}
 
-    LoopActorResults --> WriteActorDir[Write to actor directory:\n.generated-files-[actorName]]
+    LoopActorResults --> WriteActorDir[Write to actor-specific directory]
 
-    WriteActorDir --> NextActorResult{More actor\nresults?}
+    WriteActorDir --> NextActorResult{More actor results?}
 
     NextActorResult -->|Yes| LoopActorResults
     NextActorResult -->|No| End
