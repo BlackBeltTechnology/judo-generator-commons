@@ -486,7 +486,72 @@ generated/*
 - Fallback for non-POSIX systems (Windows)
 - Creates parent directories automatically
 
-### 4. GitIgnore Synchronization
+### 4. Whitespace-Tolerant Comparison
+
+**Purpose**: Detect semantically equivalent files despite formatting differences
+
+**Problem**: Code formatters (Prettier, IDE auto-format) modify generated files, causing false checksum mismatches when builds fail before checksum regeneration.
+
+**Configuration** (in generator model YAML):
+```yaml
+fileNormalizers:
+  # Auto-detect all supported languages
+  - preset: auto
+  
+  # Or specific presets
+  - preset: java
+  - preset: ts
+  
+  # Or custom configuration
+  - extensions: [java, kt]
+    removeDoubleSpaces: true
+    removeTabs: true
+    patterns:
+      - pattern: "^import\\s+.*?;\\s*$"
+        flags: [MULTILINE]
+```
+
+**Built-in Presets**:
+| Preset | Extensions | Description |
+|--------|------------|-------------|
+| `auto` | All below | Auto-detect by extension |
+| `java` | .java | Remove imports, collapse whitespace |
+| `ts` | .ts, .tsx | Remove imports, collapse whitespace |
+| `js` | .js, .jsx, .mjs, .cjs | Remove imports, collapse whitespace |
+| `rust` | .rs | Remove use statements, collapse whitespace |
+| `go` | .go | Remove imports, collapse whitespace |
+| `python` | .py | Remove imports, collapse whitespace |
+
+**Normalization Order**:
+1. Line endings: CRLF → LF (always)
+2. Boolean flags: tabs → double spaces → newlines
+3. Custom regex patterns (in configured order)
+
+**Workflow**:
+```
+1. Checksum mismatch detected
+2. If normalizer configured for file extension:
+   a. Load filesystem and generated content
+   b. Apply normalizations to both
+   c. Compare normalized content
+   d. If equal: keep file, update checksum (INFO log)
+   e. If different: proceed with normal validation
+3. If no normalizer: use standard checksum validation
+```
+
+**Implementation Files**:
+- `NormalizerPattern.java` - Regex pattern with flags
+- `FileTypeNormalizer.java` - Per-extension normalizer config
+- `FileNormalizerRegistry.java` - Registry by extension
+- `ContentComparator.java` - Normalized comparison utility
+- `NormalizerPresets.java` - Built-in preset definitions
+
+**Logging**: INFO level when checksum auto-updated
+```
+INFO: File 'Foo.java' has equivalent normalized content, updating checksum
+```
+
+### 5. GitIgnore Synchronization
 
 **Purpose**: Auto-update .gitignore with generated files
 
@@ -506,7 +571,7 @@ generated/*
 - Adds block if not present
 - Method: `addGeneratedFiles(Collection<GeneratorFileEntry>)`
 
-### 5. SpringEL Expression System
+### 6. SpringEL Expression System
 
 **Engine**: Spring Expression Language 6.2.7
 

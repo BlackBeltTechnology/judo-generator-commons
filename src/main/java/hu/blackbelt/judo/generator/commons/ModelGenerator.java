@@ -9,13 +9,13 @@ package hu.blackbelt.judo.generator.commons;
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- * 
+ *
  * This Source Code may also be made available under the following Secondary
  * Licenses when the conditions for such availability set forth in the Eclipse
  * Public License, v. 2.0 are satisfied: GNU General Public License, version 2
  * with the GNU Classpath Exception which is
  * available at https://www.gnu.org/software/classpath/license.html.
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  * #L%
  */
@@ -25,13 +25,6 @@ import com.github.jknack.handlebars.ValueResolver;
 import com.github.jknack.handlebars.io.URLTemplateLoader;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
-import org.slf4j.Logger;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
-
 import java.io.*;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -51,6 +44,12 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 /**
  * This class loads descriptor yaml file and processing it.
@@ -59,51 +58,69 @@ import java.util.zip.ZipOutputStream;
  */
 @Slf4j
 public class ModelGenerator<M> {
+
     public static final String NEWLINE = System.getProperty("line.separator");
 
     public static final String GENERATED_FILES = ".generated-files";
 
     public static final String NAME = "name";
-    public static final Boolean TEMPLATE_DEBUG = System.getProperty("templateDebug") != null;
+    public static final Boolean TEMPLATE_DEBUG =
+        System.getProperty("templateDebug") != null;
     public static final String YAML = ".yaml";
 
     public static GeneratedFile generateFile(
-            final ModelGeneratorContext generatorContext,
-            final StandardEvaluationContext evaluationContext,
-            final TemplateEvaulator templateEvaulator,
-            final GeneratorTemplate generatorTemplate,
-            final Context.Builder contextBuilder,
-            final Logger log) {
-
-
+        final ModelGeneratorContext generatorContext,
+        final StandardEvaluationContext evaluationContext,
+        final TemplateEvaulator templateEvaulator,
+        final GeneratorTemplate generatorTemplate,
+        final Context.Builder contextBuilder,
+        final Logger log
+    ) {
         GeneratedFile generatedFile = new GeneratedFile();
         boolean condition = true;
         if (templateEvaulator.getConditionExpression() != null) {
             try {
-                condition = templateEvaulator.getConditionExpression().getValue(evaluationContext, Boolean.class);
+                condition = templateEvaulator
+                    .getConditionExpression()
+                    .getValue(evaluationContext, Boolean.class);
             } catch (Exception e) {
-                throw new IllegalArgumentException("Could not evaluate condition expression in " + generatorTemplate.toString());
+                throw new IllegalArgumentException(
+                    "Could not evaluate condition expression in " +
+                        generatorTemplate.toString()
+                );
             }
         }
         generatedFile.setCondition(condition);
 
         try {
-            generatedFile.setPath(templateEvaulator.getPathExpression().getValue(evaluationContext, String.class));
+            generatedFile.setPath(
+                templateEvaulator
+                    .getPathExpression()
+                    .getValue(evaluationContext, String.class)
+            );
         } catch (Exception e) {
-            throw new IllegalArgumentException("Could not evaluate path expression in " + generatorTemplate.toString(), e);
+            throw new IllegalArgumentException(
+                "Could not evaluate path expression in " +
+                    generatorTemplate.toString(),
+                e
+            );
         }
 
         if (generatorTemplate.isCopy()) {
             String location = generatorTemplate.getTemplateName();
             if (location.startsWith("/")) {
-                location =  location.substring(1);
+                location = location.substring(1);
             }
             location = generatorContext.getTemplateLoader().resolve(location);
             try {
-                URL resource = generatorContext.getUrlResolver().getResource(location);
+                URL resource = generatorContext
+                    .getUrlResolver()
+                    .getResource(location);
                 if (resource != null) {
-                    generatedFile.setContent(ByteStreams.toByteArray(resource.openStream()));
-                }  else {
+                    generatedFile.setContent(
+                        ByteStreams.toByteArray(resource.openStream())
+                    );
+                } else {
                     log.error("Could not locate: " + location);
                 }
             } catch (Exception e) {
@@ -113,111 +130,404 @@ public class ModelGenerator<M> {
             StringWriter sourceFile = new StringWriter();
             try {
                 Context context = contextBuilder.build();
-                callBindContextForTypeIfCan(generatorContext, Context.class, context);
+                callBindContextForTypeIfCan(
+                    generatorContext,
+                    Context.class,
+                    context
+                );
                 templateEvaulator.getTemplate().apply(context, sourceFile);
             } catch (Exception e) {
-                throw new RuntimeException("Could not generate file: " + generatedFile.getPath(), e);
+                throw new RuntimeException(
+                    "Could not generate file: " + generatedFile.getPath(),
+                    e
+                );
             }
-            generatedFile.setContent(sourceFile.toString().getBytes(Charsets.UTF_8));
+            generatedFile.setContent(
+                sourceFile.toString().getBytes(Charsets.UTF_8)
+            );
         }
 
         String permissions = null;
         if (generatorTemplate.getPermission() != null) {
             permissions = generatorTemplate.getPermission();
-        } else if (generatorContext.getGeneratorModel().getPermission() != null) {
+        } else if (
+            generatorContext.getGeneratorModel().getPermission() != null
+        ) {
             permissions = generatorContext.getGeneratorModel().getPermission();
         }
         if (permissions != null) {
             try {
-                Set<PosixFilePermission> posixFilePermissions = PosixFilePermissions.fromString(permissions);
+                Set<PosixFilePermission> posixFilePermissions =
+                    PosixFilePermissions.fromString(permissions);
                 generatedFile.setPermissions(posixFilePermissions);
             } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Illegal permission for: " + generatedFile.getPath() + " Permission: " + permissions);
+                throw new RuntimeException(
+                    "Illegal permission for: " +
+                        generatedFile.getPath() +
+                        " Permission: " +
+                        permissions
+                );
             }
         }
 
         return generatedFile;
     }
 
-    public static <D> Consumer<Map.Entry<D, Collection<GeneratedFile>>> getDirectoryWriterForActor(
-            Function<D, File> actorTypeTargetDirectoryResolver,
-            Function<D, String> actorTypeNameResolver,  boolean validateChecksum, Logger log) {
-        return e -> writeDirectory(e.getValue(), actorTypeTargetDirectoryResolver.apply(e.getKey()), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()), validateChecksum);
-
+    public static <D> Consumer<
+        Map.Entry<D, Collection<GeneratedFile>>
+    > getDirectoryWriterForActor(
+        Function<D, File> actorTypeTargetDirectoryResolver,
+        Function<D, String> actorTypeNameResolver,
+        boolean validateChecksum,
+        Logger log
+    ) {
+        return e ->
+            writeDirectory(
+                e.getValue(),
+                actorTypeTargetDirectoryResolver.apply(e.getKey()),
+                GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()),
+                validateChecksum,
+                null
+            );
     }
 
-    public static Consumer<Collection<GeneratedFile>> getDirectoryWriter(Supplier<File> targetDirectoryResolver, boolean validateChecksum, Logger log) {
-        return e -> writeDirectory(e, targetDirectoryResolver.get(), GENERATED_FILES, validateChecksum);
+    public static <D> Consumer<
+        Map.Entry<D, Collection<GeneratedFile>>
+    > getDirectoryWriterForActor(
+        Function<D, File> actorTypeTargetDirectoryResolver,
+        Function<D, String> actorTypeNameResolver,
+        boolean validateChecksum,
+        Logger log,
+        FileNormalizerRegistry normalizerRegistry
+    ) {
+        return e ->
+            writeDirectory(
+                e.getValue(),
+                actorTypeTargetDirectoryResolver.apply(e.getKey()),
+                GENERATED_FILES + "-" + actorTypeNameResolver.apply(e.getKey()),
+                validateChecksum,
+                normalizerRegistry
+            );
     }
 
-    public static void writeDirectory(Collection<GeneratedFile> generatedFiles, File targetDirectory, String generatorFilesName, boolean validateChecksum) {
-        Collection<GeneratedFile> generatedFilesFilteredWithCondition = generatedFiles.stream().filter(f -> f.isCondition()).collect(Collectors.toList());
+    public static Consumer<Collection<GeneratedFile>> getDirectoryWriter(
+        Supplier<File> targetDirectoryResolver,
+        boolean validateChecksum,
+        Logger log
+    ) {
+        return e ->
+            writeDirectory(
+                e,
+                targetDirectoryResolver.get(),
+                GENERATED_FILES,
+                validateChecksum,
+                null
+            );
+    }
 
-        GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
-        ChecksumIgnore checksumIgnore = new ChecksumIgnore(targetDirectory.toPath());
+    public static Consumer<Collection<GeneratedFile>> getDirectoryWriter(
+        Supplier<File> targetDirectoryResolver,
+        boolean validateChecksum,
+        Logger log,
+        FileNormalizerRegistry normalizerRegistry
+    ) {
+        return e ->
+            writeDirectory(
+                e,
+                targetDirectoryResolver.get(),
+                GENERATED_FILES,
+                validateChecksum,
+                normalizerRegistry
+            );
+    }
 
-        Collection<GeneratorFileEntry> generatorFileEntryCollection = getGeneratorFiles(generatedFilesFilteredWithCondition);
-        Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
-        Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
+    public static void writeDirectory(
+        Collection<GeneratedFile> generatedFiles,
+        File targetDirectory,
+        String generatorFilesName,
+        boolean validateChecksum
+    ) {
+        writeDirectory(
+            generatedFiles,
+            targetDirectory,
+            generatorFilesName,
+            validateChecksum,
+            null
+        );
+    }
 
-        Map<String, GeneratorFileEntry> generatorFileEntryMap = generatorFileEntryCollection.stream()
-                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
-        Map<String, GeneratorFileEntry> savedFileEntryMap = savedFileEntryCollection.stream()
-                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
-        Map<String, GeneratorFileEntry> filesystemFileEntryMap = filesystemFileEntryCollection.stream()
-                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
+    public static void writeDirectory(
+        Collection<GeneratedFile> generatedFiles,
+        File targetDirectory,
+        String generatorFilesName,
+        boolean validateChecksum,
+        FileNormalizerRegistry normalizerRegistry
+    ) {
+        Collection<GeneratedFile> generatedFilesFilteredWithCondition =
+            generatedFiles
+                .stream()
+                .filter(f -> f.isCondition())
+                .collect(Collectors.toList());
+
+        GeneratorIgnore generatorIgnore = new GeneratorIgnore(
+            targetDirectory.toPath()
+        );
+        ChecksumIgnore checksumIgnore = new ChecksumIgnore(
+            targetDirectory.toPath()
+        );
+
+        Collection<GeneratorFileEntry> generatorFileEntryCollection =
+            getGeneratorFiles(generatedFilesFilteredWithCondition);
+        Collection<GeneratorFileEntry> savedFileEntryCollection =
+            readGeneratedFiles(targetDirectory, generatorFilesName);
+        Collection<GeneratorFileEntry> filesystemFileEntryCollection =
+            readFilesystemEntries(targetDirectory, savedFileEntryCollection);
+
+        Map<String, GeneratorFileEntry> generatorFileEntryMap =
+            generatorFileEntryCollection
+                .stream()
+                .collect(
+                    Collectors.toMap(
+                        GeneratorFileEntry::getPath,
+                        v -> v,
+                        (a1, a2) -> a1
+                    )
+                );
+        Map<String, GeneratorFileEntry> savedFileEntryMap =
+            savedFileEntryCollection
+                .stream()
+                .collect(
+                    Collectors.toMap(
+                        GeneratorFileEntry::getPath,
+                        v -> v,
+                        (a1, a2) -> a1
+                    )
+                );
+        Map<String, GeneratorFileEntry> filesystemFileEntryMap =
+            filesystemFileEntryCollection
+                .stream()
+                .collect(
+                    Collectors.toMap(
+                        GeneratorFileEntry::getPath,
+                        v -> v,
+                        (a1, a2) -> a1
+                    )
+                );
 
         // Delete files which is presented in the saved entry collection and presented in the filesystem, but it's not presented
         // in the saved collection
-        filesystemFileEntryCollection.parallelStream()
-                .filter(f -> !generatorFileEntryMap.containsKey(f.getPath()))
-                .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
-                .forEach(f -> new File(targetDirectory, f.getPath()).delete());
+        filesystemFileEntryCollection
+            .parallelStream()
+            .filter(f -> !generatorFileEntryMap.containsKey(f.getPath()))
+            .filter(f ->
+                !generatorIgnore.shouldExcludeFile(
+                    new File(targetDirectory, f.getPath()).toPath()
+                )
+            )
+            .forEach(f -> new File(targetDirectory, f.getPath()).delete());
+
+        // Build content map for normalized comparison (if normalizer registry is provided)
+        ContentComparator contentComparator = normalizerRegistry != null &&
+            normalizerRegistry.hasNormalizers()
+            ? new ContentComparator(normalizerRegistry)
+            : null;
+        Map<String, byte[]> generatedContentMap = contentComparator != null
+            ? generatedFilesFilteredWithCondition
+                  .stream()
+                  .collect(
+                      Collectors.toMap(
+                          GeneratedFile::getPath,
+                          GeneratedFile::getContent,
+                          (a1, a2) -> a1
+                      )
+                  )
+            : Collections.emptyMap();
+
+        // Track files that passed normalized comparison (to update their checksums)
+        Set<String> normalizedMatchFiles = new HashSet<>();
 
         if (validateChecksum) {
             // Check files where filesystem checksum does not match with the last generated ones and it's not ignored.
-            List<GeneratorFileEntry> checksumMismatchInFilesystem = filesystemFileEntryCollection.stream()
+            List<GeneratorFileEntry> checksumMismatchInFilesystem =
+                filesystemFileEntryCollection
+                    .stream()
                     .filter(f -> savedFileEntryMap.containsKey(f.getPath()))
-                    .filter(f -> !checksumIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
-                    .filter(f -> !"".equals(f.getChecksum()) && !f.getChecksum().equals(savedFileEntryMap.get(f.getPath()).getChecksum()))
-                    .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
+                    .filter(f ->
+                        !checksumIgnore.shouldExcludeFile(
+                            new File(targetDirectory, f.getPath()).toPath()
+                        )
+                    )
+                    .filter(
+                        f ->
+                            !"".equals(f.getChecksum()) &&
+                            !f
+                                .getChecksum()
+                                .equals(
+                                    savedFileEntryMap
+                                        .get(f.getPath())
+                                        .getChecksum()
+                                )
+                    )
+                    .filter(f ->
+                        !generatorIgnore.shouldExcludeFile(
+                            new File(targetDirectory, f.getPath()).toPath()
+                        )
+                    )
                     .collect(Collectors.toList());
 
+            // Apply normalized comparison fallback for files with checksum mismatch
+            if (
+                contentComparator != null &&
+                checksumMismatchInFilesystem.size() > 0
+            ) {
+                List<GeneratorFileEntry> stillMismatched = new ArrayList<>();
+                for (GeneratorFileEntry entry : checksumMismatchInFilesystem) {
+                    if (
+                        contentComparator.hasNormalizer(entry.getPath()) &&
+                        generatedContentMap.containsKey(entry.getPath())
+                    ) {
+                        // Read filesystem file content
+                        File file = new File(targetDirectory, entry.getPath());
+                        try {
+                            byte[] filesystemContent = Files.readAllBytes(
+                                file.toPath()
+                            );
+                            byte[] generatedContent = generatedContentMap.get(
+                                entry.getPath()
+                            );
+
+                            if (
+                                contentComparator.compareNormalized(
+                                    entry.getPath(),
+                                    filesystemContent,
+                                    generatedContent
+                                )
+                            ) {
+                                // Normalized content matches - keep existing file, update checksum
+                                normalizedMatchFiles.add(entry.getPath());
+                                log.info(
+                                    "File '{}' has equivalent normalized content, updating checksum",
+                                    entry.getPath()
+                                );
+                            } else {
+                                stillMismatched.add(entry);
+                            }
+                        } catch (IOException e) {
+                            // If we can't read the file, treat it as a mismatch
+                            stillMismatched.add(entry);
+                        }
+                    } else {
+                        stillMismatched.add(entry);
+                    }
+                }
+                checksumMismatchInFilesystem = stillMismatched;
+            }
+
             if (checksumMismatchInFilesystem.size() > 0) {
-                throw new IllegalStateException("There are manual changes in the generated files.\n" +
+                throw new IllegalStateException(
+                    "There are manual changes in the generated files.\n" +
                         "Please discard the changes, delete file or put them to .generator-ignore:\n\t" +
-                        String.join("\n\t", checksumMismatchInFilesystem.stream()
-                                .map(f -> f.getPath()).collect(Collectors.toList())));
+                        String.join(
+                            "\n\t",
+                            checksumMismatchInFilesystem
+                                .stream()
+                                .map(f -> f.getPath())
+                                .collect(Collectors.toList())
+                        )
+                );
             }
         }
 
         // Check files where generated checksum does not match with the last generated ones.
-        Map<String, GeneratorFileEntry> haveToGenerate = generatorFileEntryCollection.stream()
-                .filter(f ->
+        Map<String, GeneratorFileEntry> haveToGenerate =
+            generatorFileEntryCollection
+                .stream()
+                .filter(
+                    f ->
                         !filesystemFileEntryMap.containsKey(f.getPath()) ||
                         !savedFileEntryMap.containsKey(f.getPath()) ||
-                                !(savedFileEntryMap.containsKey(f.getPath())
-                                        && savedFileEntryMap.get(f.getPath()).getChecksum().equals(f.getChecksum())))
-                .filter(f -> !checksumIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
-                .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
-                .collect(Collectors.toMap(GeneratorFileEntry::getPath, v -> v, (a1, a2) -> a1));
+                        !(savedFileEntryMap.containsKey(f.getPath()) &&
+                            savedFileEntryMap
+                                .get(f.getPath())
+                                .getChecksum()
+                                .equals(f.getChecksum()))
+                )
+                .filter(f ->
+                    !checksumIgnore.shouldExcludeFile(
+                        new File(targetDirectory, f.getPath()).toPath()
+                    )
+                )
+                .filter(f ->
+                    !generatorIgnore.shouldExcludeFile(
+                        new File(targetDirectory, f.getPath()).toPath()
+                    )
+                )
+                .collect(
+                    Collectors.toMap(
+                        GeneratorFileEntry::getPath,
+                        v -> v,
+                        (a1, a2) -> a1
+                    )
+                );
 
-        generatedFilesFilteredWithCondition.parallelStream()
-                .filter(f -> haveToGenerate.containsKey(f.getPath()))
-                .forEach(f -> writeFile(targetDirectory, generatorIgnore, f));
+        // Exclude files that passed normalized comparison from generation
+        generatedFilesFilteredWithCondition
+            .parallelStream()
+            .filter(f -> haveToGenerate.containsKey(f.getPath()))
+            .filter(f -> !normalizedMatchFiles.contains(f.getPath()))
+            .forEach(f -> writeFile(targetDirectory, generatorIgnore, f));
 
-        writeGeneratedFiles(targetDirectory, generatorFileEntryCollection, generatorFilesName);
+        // Update checksums for files that passed normalized comparison
+        // (use the filesystem checksum so it matches the actual file on disk)
+        Collection<GeneratorFileEntry> finalFileEntryCollection;
+        if (!normalizedMatchFiles.isEmpty()) {
+            finalFileEntryCollection = generatorFileEntryCollection
+                .stream()
+                .map(entry -> {
+                    if (normalizedMatchFiles.contains(entry.getPath())) {
+                        // Use filesystem checksum for files that passed normalized comparison
+                        GeneratorFileEntry filesystemEntry =
+                            filesystemFileEntryMap.get(entry.getPath());
+                        if (filesystemEntry != null) {
+                            return GeneratorFileEntry.generatorFileEntry()
+                                .path(entry.getPath())
+                                .checksum(filesystemEntry.getChecksum())
+                                .build();
+                        }
+                    }
+                    return entry;
+                })
+                .collect(Collectors.toList());
+        } else {
+            finalFileEntryCollection = generatorFileEntryCollection;
+        }
+
+        writeGeneratedFiles(
+            targetDirectory,
+            finalFileEntryCollection,
+            generatorFilesName
+        );
     }
-
 
     public static <D> Consumer<D> getDirectoryChecksumRemoverForActor(
-            Function<D, File> actorTypeTargetDirectoryResolver,
-            Function<D, String> actorTypeNameResolver) {
-        return e -> resetGeneratedFilesChecksum(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
+        Function<D, File> actorTypeTargetDirectoryResolver,
+        Function<D, String> actorTypeNameResolver
+    ) {
+        return e ->
+            resetGeneratedFilesChecksum(
+                actorTypeTargetDirectoryResolver.apply(e),
+                GENERATED_FILES + "-" + actorTypeNameResolver.apply(e)
+            );
     }
 
-    public static Runnable getDirectoryChecksumRemover(Supplier<File> targetDirectoryResolver) {
-        return () -> resetGeneratedFilesChecksum(targetDirectoryResolver.get(), GENERATED_FILES);
+    public static Runnable getDirectoryChecksumRemover(
+        Supplier<File> targetDirectoryResolver
+    ) {
+        return () ->
+            resetGeneratedFilesChecksum(
+                targetDirectoryResolver.get(),
+                GENERATED_FILES
+            );
     }
 
     /*
@@ -234,97 +544,212 @@ public class ModelGenerator<M> {
     */
 
     public static <D> Consumer<D> getDirectoryGitignoreSynchronizerForActor(
-            Function<D, File> actorTypeTargetDirectoryResolver,
-            Function<D, String> actorTypeNameResolver, Function<String, Boolean> fileIsIgnored) {
-        return e -> synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e), fileIsIgnored);
-
+        Function<D, File> actorTypeTargetDirectoryResolver,
+        Function<D, String> actorTypeNameResolver,
+        Function<String, Boolean> fileIsIgnored
+    ) {
+        return e ->
+            synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(
+                actorTypeTargetDirectoryResolver.apply(e),
+                GENERATED_FILES + "-" + actorTypeNameResolver.apply(e),
+                fileIsIgnored
+            );
     }
 
-    public static Runnable getDirectoryGitignoreSynchronizer(Supplier<File> targetDirectoryResolver, Function<String, Boolean> fileIsIgnored) {
-        return () -> synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(targetDirectoryResolver.get(), GENERATED_FILES, fileIsIgnored);
+    public static Runnable getDirectoryGitignoreSynchronizer(
+        Supplier<File> targetDirectoryResolver,
+        Function<String, Boolean> fileIsIgnored
+    ) {
+        return () ->
+            synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(
+                targetDirectoryResolver.get(),
+                GENERATED_FILES,
+                fileIsIgnored
+            );
     }
-
 
     public static <D> Consumer<D> getDirectoryChecksumCalculatorForActor(
-            Function<D, File> actorTypeTargetDirectoryResolver,
-            Function<D, String> actorTypeNameResolver) {
-        return e -> recalculateChecksumToDirectory(actorTypeTargetDirectoryResolver.apply(e), GENERATED_FILES + "-" + actorTypeNameResolver.apply(e));
-
+        Function<D, File> actorTypeTargetDirectoryResolver,
+        Function<D, String> actorTypeNameResolver
+    ) {
+        return e ->
+            recalculateChecksumToDirectory(
+                actorTypeTargetDirectoryResolver.apply(e),
+                GENERATED_FILES + "-" + actorTypeNameResolver.apply(e)
+            );
     }
 
-    public static Runnable getDirectoryChecksumCalculator(Supplier<File> targetDirectoryResolver) {
-        return () -> recalculateChecksumToDirectory(targetDirectoryResolver.get(), GENERATED_FILES);
+    public static Runnable getDirectoryChecksumCalculator(
+        Supplier<File> targetDirectoryResolver
+    ) {
+        return () ->
+            recalculateChecksumToDirectory(
+                targetDirectoryResolver.get(),
+                GENERATED_FILES
+            );
     }
 
-    public static void recalculateChecksumToDirectory(File targetDirectory, String generatorFilesName) {
-        Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatorFilesName);
-        Collection<GeneratorFileEntry> filesystemFileEntryCollection = readFilesystemEntries(targetDirectory, savedFileEntryCollection);
-        writeGeneratedFiles(targetDirectory, filesystemFileEntryCollection, generatorFilesName);
+    public static void recalculateChecksumToDirectory(
+        File targetDirectory,
+        String generatorFilesName
+    ) {
+        Collection<GeneratorFileEntry> savedFileEntryCollection =
+            readGeneratedFiles(targetDirectory, generatorFilesName);
+        Collection<GeneratorFileEntry> filesystemFileEntryCollection =
+            readFilesystemEntries(targetDirectory, savedFileEntryCollection);
+        writeGeneratedFiles(
+            targetDirectory,
+            filesystemFileEntryCollection,
+            generatorFilesName
+        );
     }
 
-    public static void cleanGeneratedFromChecksumInDirectory(File targetDirectory, String generatorFilesName) {
-        GeneratorIgnore generatorIgnore = new GeneratorIgnore(targetDirectory.toPath());
+    public static void cleanGeneratedFromChecksumInDirectory(
+        File targetDirectory,
+        String generatorFilesName
+    ) {
+        GeneratorIgnore generatorIgnore = new GeneratorIgnore(
+            targetDirectory.toPath()
+        );
         readGeneratedFiles(targetDirectory, generatorFilesName)
+            .stream()
+            .filter(f ->
+                !generatorIgnore.shouldExcludeFile(
+                    new File(targetDirectory, f.getPath()).toPath()
+                )
+            )
+            .forEach(e -> {
+                deleteExitingFileInDirectory(targetDirectory, e.getPath());
+            });
+    }
+
+    public static void synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(
+        File targetDirectory,
+        String generatorFilesName,
+        Function<String, Boolean> fileIsIgnored
+    ) {
+        GitIgnoreSynchronizer gitIgnoreSynchronizer = new GitIgnoreSynchronizer(
+            targetDirectory.toPath()
+        );
+        gitIgnoreSynchronizer.addGeneratedFiles(
+            readGeneratedFiles(targetDirectory, generatorFilesName)
                 .stream()
-                .filter(f -> !generatorIgnore.shouldExcludeFile(new File(targetDirectory, f.getPath()).toPath()))
-                .forEach(e -> {
-                    deleteExitingFileInDirectory(targetDirectory, e.getPath());
-                });
+                .filter(e -> !fileIsIgnored.apply(e.getPath()))
+                .toList()
+        );
     }
 
-    public static void synchronizeGeneratorIgnoredFileWithGitignoreInDirectory(File targetDirectory, String generatorFilesName, Function<String, Boolean> fileIsIgnored) {
-        GitIgnoreSynchronizer gitIgnoreSynchronizer = new GitIgnoreSynchronizer(targetDirectory.toPath());
-        gitIgnoreSynchronizer.addGeneratedFiles(readGeneratedFiles(targetDirectory, generatorFilesName)
-                .stream().filter(e -> !fileIsIgnored.apply(e.getPath())).toList());
-    }
-
-    public static void deleteExitingFileInDirectory(File targetDirectory, String generatorFilesName) {
+    public static void deleteExitingFileInDirectory(
+        File targetDirectory,
+        String generatorFilesName
+    ) {
         File f = new File(targetDirectory, generatorFilesName);
         if (f.exists()) {
             f.delete();
         }
     }
 
-    public static List<GeneratorFileEntry> getGeneratorFiles(Collection<GeneratedFile> generatedFiles) {
+    public static List<GeneratorFileEntry> getGeneratorFiles(
+        Collection<GeneratedFile> generatedFiles
+    ) {
         ArrayList<GeneratorFileEntry> result = new ArrayList();
-        result.addAll(generatedFiles.stream().map(
-                        f -> GeneratorFileEntry.generatorFileEntry()
-                                .path(f.getPath())
-                                .checksum(ChecksumUtil.getMD5(f.getContent())).build())
-                .collect(Collectors.toList()));
+        result.addAll(
+            generatedFiles
+                .stream()
+                .map(f ->
+                    GeneratorFileEntry.generatorFileEntry()
+                        .path(f.getPath())
+                        .checksum(ChecksumUtil.getMD5(f.getContent()))
+                        .build()
+                )
+                .collect(Collectors.toList())
+        );
 
         Collections.sort(result);
         return result;
     }
 
-    private static void writeFile(File targetDirectory, GeneratorIgnore generatorIgnore, GeneratedFile generatedFile) {
+    private static void writeFile(
+        File targetDirectory,
+        GeneratorIgnore generatorIgnore,
+        GeneratedFile generatedFile
+    ) {
         File outFile = new File(targetDirectory, generatedFile.getPath());
         outFile.getParentFile().mkdirs();
 
         try {
             if (outFile.exists()) {
-                log.debug("File already exists, overwrite: " + outFile.getAbsolutePath());
+                log.debug(
+                    "File already exists, overwrite: " +
+                        outFile.getAbsolutePath()
+                );
                 outFile.delete();
             }
-            ByteStreams.copy(new ByteArrayInputStream(generatedFile.getContent()), new FileOutputStream(outFile));
+            ByteStreams.copy(
+                new ByteArrayInputStream(generatedFile.getContent()),
+                new FileOutputStream(outFile)
+            );
             if (generatedFile.getPermissions() != null) {
-                if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
-                    Files.setPosixFilePermissions(outFile.toPath(), generatedFile.getPermissions());
+                if (
+                    FileSystems.getDefault()
+                        .supportedFileAttributeViews()
+                        .contains("posix")
+                ) {
+                    Files.setPosixFilePermissions(
+                        outFile.toPath(),
+                        generatedFile.getPermissions()
+                    );
                 } else {
-                    if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_EXECUTE)) {
-                        outFile.setExecutable(true,
-                                !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_EXECUTE)
-                                        || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_EXECUTE)));
+                    if (
+                        generatedFile
+                            .getPermissions()
+                            .contains(PosixFilePermission.OWNER_EXECUTE)
+                    ) {
+                        outFile.setExecutable(
+                            true,
+                            !(generatedFile
+                                    .getPermissions()
+                                    .contains(
+                                        PosixFilePermission.GROUP_EXECUTE
+                                    ) ||
+                                generatedFile
+                                    .getPermissions()
+                                    .contains(
+                                        PosixFilePermission.OTHERS_EXECUTE
+                                    ))
+                        );
                     }
-                    if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_READ)) {
-                        outFile.setReadable(true,
-                                !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_READ)
-                                        || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_READ)));
+                    if (
+                        generatedFile
+                            .getPermissions()
+                            .contains(PosixFilePermission.OWNER_READ)
+                    ) {
+                        outFile.setReadable(
+                            true,
+                            !(generatedFile
+                                    .getPermissions()
+                                    .contains(PosixFilePermission.GROUP_READ) ||
+                                generatedFile
+                                    .getPermissions()
+                                    .contains(PosixFilePermission.OTHERS_READ))
+                        );
                     }
-                    if (generatedFile.getPermissions().contains(PosixFilePermission.OWNER_WRITE)) {
-                        outFile.setReadable(true,
-                                !(generatedFile.getPermissions().contains(PosixFilePermission.GROUP_WRITE)
-                                        || generatedFile.getPermissions().contains(PosixFilePermission.OTHERS_WRITE)));
+                    if (
+                        generatedFile
+                            .getPermissions()
+                            .contains(PosixFilePermission.OWNER_WRITE)
+                    ) {
+                        outFile.setReadable(
+                            true,
+                            !(generatedFile
+                                    .getPermissions()
+                                    .contains(
+                                        PosixFilePermission.GROUP_WRITE
+                                    ) ||
+                                generatedFile
+                                    .getPermissions()
+                                    .contains(PosixFilePermission.OTHERS_WRITE))
+                        );
                     }
                 }
             }
@@ -334,84 +759,159 @@ public class ModelGenerator<M> {
         }
     }
 
-    public static void resetGeneratedFilesChecksum(File targetDirectory, String generatedFileName) {
-        Collection<GeneratorFileEntry> savedFileEntryCollection = readGeneratedFiles(targetDirectory, generatedFileName);
+    public static void resetGeneratedFilesChecksum(
+        File targetDirectory,
+        String generatedFileName
+    ) {
+        Collection<GeneratorFileEntry> savedFileEntryCollection =
+            readGeneratedFiles(targetDirectory, generatedFileName);
         savedFileEntryCollection.forEach(s -> {
             s.setChecksum("");
         });
-        writeGeneratedFiles(targetDirectory, savedFileEntryCollection, generatedFileName);
+        writeGeneratedFiles(
+            targetDirectory,
+            savedFileEntryCollection,
+            generatedFileName
+        );
     }
 
-    public static void writeGeneratedFiles(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection, String generatedFileName) {
+    public static void writeGeneratedFiles(
+        File targetDirectory,
+        Collection<GeneratorFileEntry> generatorFileEntryCollection,
+        String generatedFileName
+    ) {
         try {
             targetDirectory.mkdirs();
-            List<GeneratorFileEntry> generatorFileEntryList = new ArrayList<>(generatorFileEntryCollection);
-            Collections.sort(generatorFileEntryList, Comparator.comparing(GeneratorFileEntry::getPath));
-            Files.write(Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
-                    String.join(NEWLINE, generatorFileEntryList.stream().map(f -> f.toString()).collect(Collectors.toList()))
-                            .getBytes(StandardCharsets.UTF_8));
+            List<GeneratorFileEntry> generatorFileEntryList = new ArrayList<>(
+                generatorFileEntryCollection
+            );
+            Collections.sort(
+                generatorFileEntryList,
+                Comparator.comparing(GeneratorFileEntry::getPath)
+            );
+            Files.write(
+                Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
+                String.join(
+                    NEWLINE,
+                    generatorFileEntryList
+                        .stream()
+                        .map(f -> f.toString())
+                        .collect(Collectors.toList())
+                ).getBytes(StandardCharsets.UTF_8)
+            );
         } catch (IOException e) {
-            throw new RuntimeException("Could not write file: "
-                    + Paths.get(targetDirectory.getAbsolutePath(), generatedFileName).toFile().getAbsolutePath(), e);
+            throw new RuntimeException(
+                "Could not write file: " +
+                    Paths.get(
+                        targetDirectory.getAbsolutePath(),
+                        generatedFileName
+                    )
+                        .toFile()
+                        .getAbsolutePath(),
+                e
+            );
         }
     }
 
-    public static Collection<GeneratorFileEntry> readFilesystemEntries(File targetDirectory, Collection<GeneratorFileEntry> generatorFileEntryCollection) {
-
-        return generatorFileEntryCollection.parallelStream().map(f -> {
-            File file = new File(targetDirectory, f.getPath());
-            if (file.exists()) {
-                GeneratorFileEntry currentFileEntry = GeneratorFileEntry.generatorFileEntry()
-                        .checksum(ChecksumUtil.getMD5(file.toPath()))
-                        .path(f.getPath())
-                        .build();
-                return currentFileEntry;
-            }
-            return null;
-        }).filter(f -> f != null).collect(Collectors.toList());
+    public static Collection<GeneratorFileEntry> readFilesystemEntries(
+        File targetDirectory,
+        Collection<GeneratorFileEntry> generatorFileEntryCollection
+    ) {
+        return generatorFileEntryCollection
+            .parallelStream()
+            .map(f -> {
+                File file = new File(targetDirectory, f.getPath());
+                if (file.exists()) {
+                    GeneratorFileEntry currentFileEntry =
+                        GeneratorFileEntry.generatorFileEntry()
+                            .checksum(ChecksumUtil.getMD5(file.toPath()))
+                            .path(f.getPath())
+                            .build();
+                    return currentFileEntry;
+                }
+                return null;
+            })
+            .filter(f -> f != null)
+            .collect(Collectors.toList());
     }
 
-    public static Collection<GeneratorFileEntry> readGeneratedFiles(File targetDirectory, String generatedFileName) {
+    public static Collection<GeneratorFileEntry> readGeneratedFiles(
+        File targetDirectory,
+        String generatedFileName
+    ) {
         try {
-            if (Paths.get(targetDirectory.getAbsolutePath(), generatedFileName).toFile().exists()) {
-                List<String> files = Files.readAllLines(Paths.get(targetDirectory.getAbsolutePath(), generatedFileName),
-                        StandardCharsets.UTF_8);
-                List<GeneratorFileEntry> entries = files.stream().map(s -> GeneratorFileEntry.fromString(s)).collect(Collectors.toList());
+            if (
+                Paths.get(targetDirectory.getAbsolutePath(), generatedFileName)
+                    .toFile()
+                    .exists()
+            ) {
+                List<String> files = Files.readAllLines(
+                    Paths.get(
+                        targetDirectory.getAbsolutePath(),
+                        generatedFileName
+                    ),
+                    StandardCharsets.UTF_8
+                );
+                List<GeneratorFileEntry> entries = files
+                    .stream()
+                    .map(s -> GeneratorFileEntry.fromString(s))
+                    .collect(Collectors.toList());
                 return entries;
             } else {
                 return Collections.emptyList();
             }
         } catch (IOException e) {
-            throw new RuntimeException("Could not read file: "
-                    + Paths.get(targetDirectory.getAbsolutePath(), generatedFileName).toFile().getAbsolutePath(), e);
+            throw new RuntimeException(
+                "Could not read file: " +
+                    Paths.get(
+                        targetDirectory.getAbsolutePath(),
+                        generatedFileName
+                    )
+                        .toFile()
+                        .getAbsolutePath(),
+                e
+            );
         }
     }
 
-    public static void generateToDirectory(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
+    public static void generateToDirectory(
+        GeneratorParameter.GeneratorParameterBuilder builder
+    ) throws Exception {
         generateToDirectory(builder.build());
     }
 
-    public static <T> void generateToDirectory(GeneratorParameter<T> parameter) throws Exception {
+    public static <T> void generateToDirectory(GeneratorParameter<T> parameter)
+        throws Exception {
         final AtomicBoolean loggerToBeClosed = new AtomicBoolean(false);
-        Logger log = Objects.requireNonNullElseGet(parameter.log,
-                                                () -> {
-                                                    loggerToBeClosed.set(true);
-                                                    return ModelGenerator.log;
-                                                });
+        Logger log = Objects.requireNonNullElseGet(parameter.log, () -> {
+            loggerToBeClosed.set(true);
+            return ModelGenerator.log;
+        });
 
         try {
-            GeneratorResult<T> result = parameter.performExecutor.apply(parameter);
+            GeneratorResult<T> result = parameter.performExecutor.apply(
+                parameter
+            );
 
             result.generatedByDiscriminator
-                    .entrySet()
-                    .stream()
-                    .filter(e -> parameter.getDiscriminatorPredicate().test(e.getKey()))
-                    .forEach(getDirectoryWriterForActor(
-                            parameter.getDiscriminatorTargetDirectoryResolver(),
-                            parameter.getDiscriminatorTargetNameResolver(),
-                            parameter.isValidateChecksum(),
-                            log));
-            getDirectoryWriter(parameter.targetDirectoryResolver, parameter.isValidateChecksum(), log).accept(result.generated);
+                .entrySet()
+                .stream()
+                .filter(e ->
+                    parameter.getDiscriminatorPredicate().test(e.getKey())
+                )
+                .forEach(
+                    getDirectoryWriterForActor(
+                        parameter.getDiscriminatorTargetDirectoryResolver(),
+                        parameter.getDiscriminatorTargetNameResolver(),
+                        parameter.isValidateChecksum(),
+                        log
+                    )
+                );
+            getDirectoryWriter(
+                parameter.targetDirectoryResolver,
+                parameter.isValidateChecksum(),
+                log
+            ).accept(result.generated);
         } finally {
             if (loggerToBeClosed.get()) {
                 try {
@@ -426,81 +926,124 @@ public class ModelGenerator<M> {
         }
     }
 
-    public static void resetChecksums(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
+    public static void resetChecksums(
+        GeneratorParameter.GeneratorParameterBuilder builder
+    ) throws Exception {
         resetChecksums(builder.build());
     }
 
-    public static void resetChecksums(GeneratorParameter parameter) throws Exception {
-
+    public static void resetChecksums(GeneratorParameter parameter)
+        throws Exception {
         getDirectoryChecksumRemover(parameter.targetDirectoryResolver);
 
         getDirectoryChecksumRemoverForActor(
-                parameter.getDiscriminatorTargetDirectoryResolver(),
-                parameter.getDiscriminatorTargetNameResolver());
+            parameter.getDiscriminatorTargetDirectoryResolver(),
+            parameter.getDiscriminatorTargetNameResolver()
+        );
     }
 
-    public static <T> void resetChecksumsInDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) throws Exception {
-        discriminators.forEach(getDirectoryChecksumRemoverForActor(
+    public static <T> void resetChecksumsInDirectory(
+        GeneratorParameter<T> parameter,
+        Collection<T> discriminators
+    ) throws Exception {
+        discriminators.forEach(
+            getDirectoryChecksumRemoverForActor(
                 parameter.getDiscriminatorTargetDirectoryResolver(),
-                parameter.getDiscriminatorTargetNameResolver()));
+                parameter.getDiscriminatorTargetNameResolver()
+            )
+        );
         getDirectoryChecksumRemover(parameter.targetDirectoryResolver).run();
     }
 
-    public static void cleanGeneratedFromChecksum(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
+    public static void cleanGeneratedFromChecksum(
+        GeneratorParameter.GeneratorParameterBuilder builder
+    ) throws Exception {
         resetChecksums(builder.build());
     }
 
-    public static void cleanGeneratedFromChecksum(GeneratorParameter parameter) throws Exception {
-
+    public static void cleanGeneratedFromChecksum(GeneratorParameter parameter)
+        throws Exception {
         getDirectoryChecksumRemover(parameter.targetDirectoryResolver);
 
         getDirectoryChecksumRemoverForActor(
-                parameter.getDiscriminatorTargetDirectoryResolver(),
-                parameter.getDiscriminatorTargetNameResolver());
+            parameter.getDiscriminatorTargetDirectoryResolver(),
+            parameter.getDiscriminatorTargetNameResolver()
+        );
     }
 
-    public static <T> void cleanGeneratedFromChecksumInDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) throws Exception {
-        discriminators.forEach(getDirectoryChecksumRemoverForActor(
+    public static <T> void cleanGeneratedFromChecksumInDirectory(
+        GeneratorParameter<T> parameter,
+        Collection<T> discriminators
+    ) throws Exception {
+        discriminators.forEach(
+            getDirectoryChecksumRemoverForActor(
                 parameter.getDiscriminatorTargetDirectoryResolver(),
-                parameter.getDiscriminatorTargetNameResolver()));
+                parameter.getDiscriminatorTargetNameResolver()
+            )
+        );
         getDirectoryChecksumRemover(parameter.targetDirectoryResolver).run();
     }
 
-    public static void synchronizeGitignore(GeneratorParameter.GeneratorParameterBuilder builder) throws Exception {
+    public static void synchronizeGitignore(
+        GeneratorParameter.GeneratorParameterBuilder builder
+    ) throws Exception {
         synchronizeGitignore(builder.build());
     }
 
-    public static void synchronizeGitignore(GeneratorParameter parameter) throws Exception {
-
+    public static void synchronizeGitignore(GeneratorParameter parameter)
+        throws Exception {
         getDirectoryChecksumRemover(parameter.targetDirectoryResolver);
 
         getDirectoryChecksumRemoverForActor(
-                parameter.getDiscriminatorTargetDirectoryResolver(),
-                parameter.getDiscriminatorTargetNameResolver());
+            parameter.getDiscriminatorTargetDirectoryResolver(),
+            parameter.getDiscriminatorTargetNameResolver()
+        );
     }
 
-    public static <T> void synchronizeGitignoreInDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators, Function<String, Boolean> fileIsIgnored) throws Exception {
-        discriminators.forEach(getDirectoryGitignoreSynchronizerForActor(
+    public static <T> void synchronizeGitignoreInDirectory(
+        GeneratorParameter<T> parameter,
+        Collection<T> discriminators,
+        Function<String, Boolean> fileIsIgnored
+    ) throws Exception {
+        discriminators.forEach(
+            getDirectoryGitignoreSynchronizerForActor(
                 parameter.getDiscriminatorTargetDirectoryResolver(),
-                parameter.getDiscriminatorTargetNameResolver(), fileIsIgnored));
-        getDirectoryGitignoreSynchronizer(parameter.targetDirectoryResolver, fileIsIgnored).run();
+                parameter.getDiscriminatorTargetNameResolver(),
+                fileIsIgnored
+            )
+        );
+        getDirectoryGitignoreSynchronizer(
+            parameter.targetDirectoryResolver,
+            fileIsIgnored
+        ).run();
     }
 
-    public static <T> void recalculateChecksumToDirectory(GeneratorParameter<T> parameter, Collection<T> discriminators) {
-        discriminators.forEach(getDirectoryChecksumCalculatorForActor(
+    public static <T> void recalculateChecksumToDirectory(
+        GeneratorParameter<T> parameter,
+        Collection<T> discriminators
+    ) {
+        discriminators.forEach(
+            getDirectoryChecksumCalculatorForActor(
                 parameter.getDiscriminatorTargetDirectoryResolver(),
-                parameter.getDiscriminatorTargetNameResolver()));
+                parameter.getDiscriminatorTargetNameResolver()
+            )
+        );
         getDirectoryChecksumCalculator(parameter.targetDirectoryResolver).run();
     }
 
-
     @SneakyThrows(IOException.class)
-    public static InputStream getGeneratedFilesAsZip(Collection<GeneratedFile> generatedFiles) {
+    public static InputStream getGeneratedFilesAsZip(
+        Collection<GeneratedFile> generatedFiles
+    ) {
         ByteArrayOutputStream generatedZip = new ByteArrayOutputStream();
         ZipOutputStream zipOutputStream = new ZipOutputStream(generatedZip);
         for (GeneratedFile generatedFile : generatedFiles) {
             zipOutputStream.putNextEntry(new ZipEntry(generatedFile.getPath()));
-            zipOutputStream.write(generatedFile.getContent(), 0, generatedFile.getContent().length);
+            zipOutputStream.write(
+                generatedFile.getContent(),
+                0,
+                generatedFile.getContent().length
+            );
             zipOutputStream.flush();
             zipOutputStream.closeEntry();
         }
@@ -509,20 +1052,25 @@ public class ModelGenerator<M> {
         return new ByteArrayInputStream(generatedZip.toByteArray());
     }
 
-
     @Builder
     @Getter
     public static final class CreateGeneratorContextArgument {
+
         String descriptorName;
+
         @Builder.Default
         LinkedHashMap<String, URI> uris = new LinkedHashMap<>();
+
         @Builder.Default
         Collection<Class> helpers = new ArrayList<>();
 
         @Builder.Default
         Class contextAccessor = null;
+
         @Builder.Default
-        Function<Collection<URI>, URLTemplateLoader> urlTemplateLoaderFactory = null;
+        Function<Collection<URI>, URLTemplateLoader> urlTemplateLoaderFactory =
+            null;
+
         @Builder.Default
         Function<Collection<URI>, URLResolver> urlResolverFactory = null;
 
@@ -531,23 +1079,29 @@ public class ModelGenerator<M> {
 
         @Builder.Default
         Supplier<Class<?>> generatorTemplateMixin = null;
-
     }
 
-    public static ModelGeneratorContext createGeneratorContext(CreateGeneratorContextArgument args) throws IOException {
-
+    public static ModelGeneratorContext createGeneratorContext(
+        CreateGeneratorContextArgument args
+    ) throws IOException {
         URLTemplateLoader urlTemplateLoader = null;
         URLResolver urlResolver = null;
 
         if (args.urlTemplateLoaderFactory != null) {
-            urlTemplateLoader = args.urlTemplateLoaderFactory.apply(args.uris.values());
+            urlTemplateLoader = args.urlTemplateLoaderFactory.apply(
+                args.uris.values()
+            );
             if (args.urlResolverFactory != null) {
                 urlResolver = args.urlResolverFactory.apply(args.uris.values());
             } else {
-                throw new IllegalStateException("Could not determinate URLResolver");
+                throw new IllegalStateException(
+                    "Could not determinate URLResolver"
+                );
             }
         } else {
-            urlTemplateLoader = ChainedURLTemplateLoader.createFromURIs(args.uris.values());
+            urlTemplateLoader = ChainedURLTemplateLoader.createFromURIs(
+                args.uris.values()
+            );
             if (args.urlResolverFactory != null) {
                 urlResolver = args.urlResolverFactory.apply(args.uris.values());
             } else {
@@ -556,19 +1110,32 @@ public class ModelGenerator<M> {
         }
 
         if (args.uris.isEmpty()) {
-            throw new IllegalArgumentException("Minimum one URI is mandatory for templates");
+            throw new IllegalArgumentException(
+                "Minimum one URI is mandatory for templates"
+            );
         }
-
 
         GeneratorModel generatorModel = null;
 
-        Map.Entry<String, URI> root = args.uris.entrySet().stream().findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No template URI is defined"));
+        Map.Entry<String, URI> root = args.uris
+            .entrySet()
+            .stream()
+            .findFirst()
+            .orElseThrow(() ->
+                new IllegalArgumentException("No template URI is defined")
+            );
 
         for (Map.Entry<String, URI> entry : args.uris.entrySet()) {
-            GeneratorModel model = GeneratorModel.loadYamlURL(entry.getKey(),
-                    UriHelper.calculateRelativeURI(entry.getValue(), args.descriptorName + YAML).normalize().toURL(),
-                    args);
+            GeneratorModel model = GeneratorModel.loadYamlURL(
+                entry.getKey(),
+                UriHelper.calculateRelativeURI(
+                    entry.getValue(),
+                    args.descriptorName + YAML
+                )
+                    .normalize()
+                    .toURL(),
+                args
+            );
             if (entry == root || generatorModel == null) {
                 generatorModel = model;
             } else {
@@ -580,17 +1147,30 @@ public class ModelGenerator<M> {
 
         List<ValueResolver> valueResolversPar = new ArrayList<>();
         for (Class helper : args.helpers) {
-            if (ValueResolver.class.isAssignableFrom(helper) &&
-                    valueResolversPar.stream().map(v -> v.getClass()).filter(v -> v == helper).findAny().isEmpty()) {
+            if (
+                ValueResolver.class.isAssignableFrom(helper) &&
+                valueResolversPar
+                    .stream()
+                    .map(v -> v.getClass())
+                    .filter(v -> v == helper)
+                    .findAny()
+                    .isEmpty()
+            ) {
                 try {
                     Object o = helper.getDeclaredConstructor().newInstance();
                     if (o instanceof ValueResolver) {
                         valueResolversPar.add((ValueResolver) o);
                     } else {
-                        throw new IllegalArgumentException("Could not instantiate value resolver class: " + helper.getName());
+                        throw new IllegalArgumentException(
+                            "Could not instantiate value resolver class: " +
+                                helper.getName()
+                        );
                     }
                 } catch (Exception e) {
-                    throw new IllegalArgumentException("Could not load value resolver class: " + helper.getName());
+                    throw new IllegalArgumentException(
+                        "Could not load value resolver class: " +
+                            helper.getName()
+                    );
                 }
             }
         }
@@ -600,7 +1180,8 @@ public class ModelGenerator<M> {
             helpersPar.addAll(args.helpers);
         }
 
-        ModelGeneratorContext modelGeneratorContext = ModelGeneratorContext.builder()
+        ModelGeneratorContext modelGeneratorContext =
+            ModelGeneratorContext.builder()
                 .templateLoader(urlTemplateLoader)
                 .urlResolver(urlResolver)
                 .generatorModel(generatorModel)
@@ -612,17 +1193,25 @@ public class ModelGenerator<M> {
         return modelGeneratorContext;
     }
 
-
     @SneakyThrows
-    public static void callBindContextForTypeIfCan(ModelGeneratorContext generatorContext, Class type, Object value) {
+    public static void callBindContextForTypeIfCan(
+        ModelGeneratorContext generatorContext,
+        Class type,
+        Object value
+    ) {
         if (generatorContext.getContextAccessor() != null) {
-            Optional<Method> callMethod = Arrays.stream(generatorContext.getContextAccessor().getMethods()).filter(m ->
-                    m.getName().equals("bindContext") &&
-                            Modifier.isPublic(m.getModifiers()) &&
-                            Modifier.isStatic(m.getModifiers()) &&
-                            m.getParameters().length == 1 &&
-                            type.isAssignableFrom(m.getParameters()[0].getType())
-            ).findFirst();
+            Optional<Method> callMethod = Arrays.stream(
+                generatorContext.getContextAccessor().getMethods()
+            )
+                .filter(
+                    m ->
+                        m.getName().equals("bindContext") &&
+                        Modifier.isPublic(m.getModifiers()) &&
+                        Modifier.isStatic(m.getModifiers()) &&
+                        m.getParameters().length == 1 &&
+                        type.isAssignableFrom(m.getParameters()[0].getType())
+                )
+                .findFirst();
             if (callMethod.isPresent()) {
                 callMethod.get().invoke(null, value);
             }

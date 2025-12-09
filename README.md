@@ -12,6 +12,7 @@
 - [Handlebars Templates](#handlebars-templates)
 - [Helper Classes](#helper-classes)
 - [Checksum Validation](#checksum-validation)
+- [Whitespace-Tolerant Comparison](#whitespace-tolerant-comparison)
 - [Generator Ignore Patterns](#generator-ignore-patterns)
 - [File Permissions](#file-permissions)
 - [Template Overrides](#template-overrides)
@@ -957,6 +958,137 @@ Or delete the index files manually:
 rm .generated-files*
 ```
 
+## Whitespace-Tolerant Comparison
+
+When code formatters (like Prettier, IDE auto-format) modify generated files after generation, checksum mismatches can occur. The whitespace-tolerant comparison feature provides a fallback mechanism that detects semantically equivalent files despite formatting differences.
+
+### The Problem
+
+1. Generator creates files with specific formatting
+2. Build pipeline runs formatters that reformat whitespace and reorder imports
+3. Build fails before checksum regeneration
+4. Next build fails with false checksum mismatch errors
+
+### The Solution
+
+Configure file normalizers that strip non-semantic content (whitespace, imports) before comparison:
+
+```yaml
+fileNormalizers:
+  # Simplest: auto-detect for all supported languages
+  - preset: auto
+```
+
+When a checksum mismatch is detected, the generator:
+1. Loads both filesystem and generated file content
+2. Applies normalization (removes imports, collapses whitespace)
+3. Compares normalized content
+4. If equal: keeps existing file, updates checksum
+5. If different: proceeds with normal validation (error or overwrite)
+
+### Configuration
+
+#### Using Presets
+
+Built-in presets for common languages:
+
+```yaml
+fileNormalizers:
+  # Auto-detect all supported languages
+  - preset: auto
+  
+  # Or specify individual presets
+  - preset: java
+  - preset: ts
+  - preset: js
+  - preset: rust
+  - preset: go
+  - preset: python
+```
+
+#### Preset Details
+
+| Preset | Extensions | Normalizations |
+|--------|------------|----------------|
+| `auto` | All below | Per-extension settings |
+| `java` | `.java` | Remove imports, collapse spaces, remove tabs |
+| `ts` | `.ts`, `.tsx` | Remove imports, collapse spaces, remove tabs |
+| `js` | `.js`, `.jsx`, `.mjs`, `.cjs` | Remove imports, collapse spaces, remove tabs |
+| `rust` | `.rs` | Remove use statements, collapse spaces, remove tabs |
+| `go` | `.go` | Remove imports, collapse spaces, remove tabs |
+| `python` | `.py` | Remove imports, collapse spaces, remove tabs |
+
+#### Custom Configuration
+
+For fine-grained control:
+
+```yaml
+fileNormalizers:
+  - extensions: [java, kt]
+    removeDoubleSpaces: true    # Collapse "  " to " "
+    removeTabs: true            # Remove tab characters
+    removeNewLines: false       # Keep newlines
+    patterns:
+      - pattern: "^import\\s+.*?;\\s*$"
+        flags: [MULTILINE]
+        replacement: ""
+        
+  - extensions: [xml, html]
+    removeDoubleSpaces: true
+    patterns:
+      - pattern: "<!--.*?-->"
+        flags: [DOTALL]
+        replacement: ""
+```
+
+#### Boolean Flags
+
+| Flag | Description |
+|------|-------------|
+| `removeDoubleSpaces` | Collapse multiple spaces to single space |
+| `removeTabs` | Remove tab characters (replace with empty string) |
+| `removeNewLines` | Remove newline characters |
+
+#### Pattern Flags
+
+| Flag | Description |
+|------|-------------|
+| `MULTILINE` | `^` and `$` match line boundaries |
+| `DOTALL` | `.` matches newlines |
+| `CASE_INSENSITIVE` | Case-insensitive matching |
+
+### Normalization Order
+
+Normalizations are applied in a consistent order:
+
+1. **Line endings**: CRLF → LF (always applied)
+2. **Boolean flags**: tabs → double spaces → newlines
+3. **Custom patterns**: in configured order
+
+### Logging
+
+When a file passes normalized comparison, an INFO log is emitted:
+
+```
+INFO: File 'src/main/java/Foo.java' has equivalent normalized content, updating checksum
+```
+
+### Example Use Case
+
+**Before** (build fails after formatter runs):
+```
+Error: There are manual changes in the generated files.
+Please discard the changes, delete file or put them to .generator-ignore:
+    src/main/java/com/example/User.java
+```
+
+**After** (with `fileNormalizers: [{preset: auto}]`):
+```
+INFO: File 'src/main/java/com/example/User.java' has equivalent normalized content, updating checksum
+```
+
+The file is preserved with its formatted content, and the checksum is updated to match.
+
 ## Generator Ignore Patterns
 
 The `.generator-ignore` file allows you to exclude files from generation, enabling you to maintain custom modifications.
@@ -1756,7 +1888,7 @@ This project is licensed under the Eclipse Public License 2.0. See [LICENSE.txt]
 ### Related Projects
 
 * [JUDO Meta ESM](https://github.com/BlackBeltTechnology/judo-meta-esm)
-* [JUDO Meta PAM](https://github.com/BlackBeltTechnology/judo-meta-pam)
+* [JUDO Meta PSM](https://github.com/BlackBeltTechnology/judo-meta-psm)
 * [JUDO Meta UI](https://github.com/BlackBeltTechnology/judo-meta-ui)
 
 ### External Documentation
