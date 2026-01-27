@@ -1226,6 +1226,61 @@ ModelGenerator.generateToDirectory(param);
 
 ---
 
+## Modular Documentation
+
+This project includes modular, component-focused documentation packaged in the JAR for consumer projects.
+
+### Documentation Structure
+
+```
+src/main/resources/agent-docs/
+├── index.md                    # Entry point with navigation
+├── components/                 # Per-component documentation
+│   ├── model-generator.md      # Orchestration and workflow
+│   ├── template-system.md      # Handlebars and SpringEL
+│   ├── helpers.md              # Helper creation guide
+│   ├── checksum-validation.md  # Checksum management
+│   └── generator-ignore.md     # Ignore patterns
+└── guides/                     # Audience-specific guides
+    ├── ai-assistant.md         # Quick reference for AI assistants
+    ├── user-guide.md           # Getting started for developers
+    └── api-reference.md        # Detailed API documentation
+```
+
+### Claude Code Skills
+
+Skills are available in `.claude/skills/` and packaged to `claude-skills/` in the JAR:
+
+| Skill | Description |
+|-------|-------------|
+| `generate-helper` | Create new Handlebars helper classes |
+
+### Marketplace Catalog
+
+The `claude-marketplace.json` at project root lists available skills:
+
+```json
+{
+  "name": "judo-generator-commons-marketplace",
+  "plugins": [
+    {
+      "name": "generate-helper",
+      "source": "./.claude/skills/generate-helper",
+      "description": "Create a new Handlebars helper class with tests"
+    }
+  ]
+}
+```
+
+### For Consumer Projects
+
+Consumer projects can:
+1. Add judo-generator-commons as a Maven dependency
+2. Access `agent-docs/` documentation from classpath
+3. Extract skills from `claude-skills/` in the JAR to their own `.claude/skills/`
+
+---
+
 ## OpenSpec Integration
 
 This project uses **OpenSpec** for spec-driven development. See the existing `openspec/` directory structure:
