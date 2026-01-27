@@ -29,52 +29,28 @@ Each meta-model has three related modules:
 ### Core Components
 
 ```mermaid
-flowchart TB
-    subgraph MG[ModelGenerator]
-        MG_desc[Central orchestrator for generation workflow]
-        MG_m1[generateToDirectory]
-        MG_m2[resetChecksums]
-        MG_m3[recalculateChecksumToDirectory]
-        MG_m4[cleanGeneratedFromChecksum]
-    end
-
-    subgraph MGC[ModelGeneratorContext]
-        MGC_desc[State management and engine configuration]
-        MGC_m1[Handlebars template engine]
-        MGC_m2[Spring EL evaluation context]
-        MGC_m3[Helper registration]
-        MGC_m4[Value resolver collection]
-    end
-
-    subgraph GM[GeneratorModel]
-        GM_desc[Template collection]
-        GM_m1[YAML deserialization]
-        GM_m2[Override mechanism]
-        GM_m3[Global config]
-    end
-
-    subgraph TE[TemplateEvaluator]
-        TE_desc[Expression evaluation]
-        TE_m1[Factory expressions]
-        TE_m2[Path expressions]
-        TE_m3[Condition evaluation]
-    end
-
-    subgraph GT[GeneratorTemplate]
-        GT_desc[Single template config]
-        GT_m1[pathExpression]
-        GT_m2[factoryExpression]
-        GT_m3[conditionExpression]
-        GT_m4[templateContext]
-        GT_m5[actorTypeBased]
-        GT_m6[permissions]
-    end
+flowchart TD
+    MG[ModelGenerator<br/>Central orchestrator]
+    MGC[ModelGeneratorContext<br/>State & configuration]
+    GM[GeneratorModel<br/>Template collection]
+    TE[TemplateEvaluator<br/>Expression evaluation]
+    GT[GeneratorTemplate<br/>Single template config]
 
     MG --> MGC
     MGC --> GM
     MGC --> TE
     GM --> GT
 ```
+
+**ModelGenerator** - Central orchestrator with methods: `generateToDirectory()`, `resetChecksums()`, `recalculateChecksumToDirectory()`, `cleanGeneratedFromChecksum()`
+
+**ModelGeneratorContext** - State management: Handlebars engine, SpringEL context, helper registration, value resolvers
+
+**GeneratorModel** - Template collection: YAML deserialization, override mechanism, global config
+
+**TemplateEvaluator** - Expression evaluation: factory, path, and condition expressions
+
+**GeneratorTemplate** - Single template config: pathExpression, factoryExpression, conditionExpression, templateContext, actorTypeBased, permissions
 
 ### Design Patterns
 
@@ -104,91 +80,76 @@ flowchart TB
 ### Complete Flow
 
 ```mermaid
-flowchart TB
-    subgraph Entry["1. Entry: ModelGenerator.generateToDirectory"]
-        E1[Setup: Parameter logger initialization]
-        E2[Execute: performExecutor returns GeneratorResult]
-        E3[Write by discriminator - actor-based]
-        E4[Write common files]
+flowchart TD
+    subgraph Entry["1. ModelGenerator.generateToDirectory"]
+        direction TB
+        E1[Setup logger] --> E2[Execute performExecutor]
+        E2 --> E3[Write actor-based files]
+        E3 --> E4[Write common files]
     end
-
-    E1 --> E2 --> E3 --> E4
 
     subgraph WriteDir["2. writeDirectory"]
-        W1[Filter files by condition]
-        W2[Load .generator-ignore patterns]
-        W3[Load .generator-checksum-ignore patterns]
-        W4[Read saved .generated-files index]
-        W5[Calculate current filesystem checksums]
-        W6[Validate checksums]
-        W7[Determine write/delete operations]
-        W8[Write files with POSIX permissions]
-        W9[Update .generated-files index]
+        direction TB
+        W1[Filter by condition] --> W2[Load ignore patterns]
+        W2 --> W3[Read checksums]
+        W3 --> W4[Validate checksums]
+        W4 --> W5[Write files]
+        W5 --> W6[Update index]
     end
-
-    W1 --> W2 --> W3 --> W4 --> W5 --> W6 --> W7 --> W8 --> W9
 
     subgraph GenFile["3. generateFile"]
-        G1[Evaluate condition expression]
-        G2[Evaluate path expression]
-        G3{Content mode?}
-        G3a[Copy mode: Binary file copy]
-        G3b[Template mode: Handlebars apply]
-        G4[Resolve permissions]
-        G5[Return GeneratedFile]
+        direction TB
+        G1[Evaluate condition] --> G2[Evaluate path]
+        G2 --> G3{Copy mode?}
+        G3 -->|yes| G4a[Binary copy]
+        G3 -->|no| G4b[Apply template]
+        G4a --> G5[Set permissions]
+        G4b --> G5
+        G5 --> G6[Return GeneratedFile]
     end
 
-    G1 --> G2 --> G3
-    G3 -->|copy=true| G3a --> G4
-    G3 -->|copy=false| G3b --> G4
-    G4 --> G5
-
-    E3 -.-> WriteDir
-    E4 -.-> WriteDir
+    Entry --> WriteDir
+    WriteDir --> GenFile
 ```
 
 ### Expression Evaluation Sequence
 
 ```mermaid
-flowchart TB
-    subgraph Parse["Parsing Phase"]
-        Y[YAML Template] --> J[Jackson Deserialization] --> GT[GeneratorTemplate]
+flowchart TD
+    subgraph Parse["1. Parsing Phase"]
+        direction TB
+        Y[YAML Template] --> J[Jackson Deserialization]
+        J --> GT[GeneratorTemplate]
         GT --> SP[SpringEL Parser]
-        SP --> E1[factoryExpression]
-        SP --> E2[pathExpression]
-        SP --> E3[conditionExpression]
-        SP --> E4[templateContext expressions]
+        SP --> EX[Parse expressions]
     end
 
-    subgraph Context["Context Creation"]
-        SEC[StandardEvaluationContext]
-        SEC --> H[Registered helper static methods]
-        SEC --> V[Variables: self, model, actorType]
+    subgraph Context["2. Context Setup"]
+        direction TB
+        SEC[StandardEvaluationContext] --> H[Register helpers]
+        H --> V[Set variables]
     end
 
-    subgraph Template["Template Creation"]
+    subgraph Template["3. Template Setup"]
+        direction TB
         HT{templateName?}
         HT -->|null| IT[Inline template]
-        HT -->|path| NT[Named template from URL]
+        HT -->|path| NT[Load from URL]
     end
 
-    GT --> SEC
-    GT --> HT
-    SEC --> TEval[TemplateEvaluator instantiation]
-    HT --> TEval
-
-    subgraph Runtime["During generateFile"]
-        R1[Condition evaluation]
-        R2[Path evaluation]
-        R3[Factory evaluation]
-        R4[For each item]
-        R5[Build Handlebars Context]
-        R6[Bind context via contextAccessor]
-        R7[Apply template]
-        R8[Return GeneratedFile]
+    subgraph Runtime["4. Runtime Execution"]
+        direction TB
+        R1[Evaluate condition] --> R2[Evaluate path]
+        R2 --> R3[Evaluate factory]
+        R3 --> R4[For each item]
+        R4 --> R5[Apply template]
+        R5 --> R6[Return GeneratedFile]
     end
 
-    R1 --> R2 --> R3 --> R4 --> R5 --> R6 --> R7 --> R8
+    Parse --> Context
+    Parse --> Template
+    Context --> Runtime
+    Template --> Runtime
 ```
 
 ## Key Files Reference
@@ -259,30 +220,18 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    subgraph Step1["1. Annotate"]
-        A[@TemplateHelper annotation]
-        B[extends StaticMethodValueResolver]
-        C[public static methods]
-    end
-
-    subgraph Step2["2. Discovery"]
-        D[TemplateHelperFinder scans classpath]
-        E[ClassGraph annotation scanning]
-        F[Package filtering]
-    end
-
-    subgraph Step3["3. Registration"]
-        G[Add to ModelGeneratorContext.helpers]
-        H[Handlebars.registerHelpers]
-    end
-
-    subgraph Step4["4. Usage"]
-        I["Template: {{myMethod value}}"]
-        J["SpringEL: #myMethod(value)"]
-    end
-
-    Step1 --> Step2 --> Step3 --> Step4
+    A[1. Annotate<br/>@TemplateHelper] --> B[2. Discovery<br/>TemplateHelperFinder]
+    B --> C[3. Register<br/>Handlebars.registerHelpers]
+    C --> D[4. Use<br/>Template or SpringEL]
 ```
+
+**Step 1 - Annotate**: Add `@TemplateHelper`, extend `StaticMethodValueResolver`, create public static methods
+
+**Step 2 - Discovery**: `TemplateHelperFinder` scans classpath using ClassGraph with package filtering
+
+**Step 3 - Registration**: Added to `ModelGeneratorContext.helpers`, registered with Handlebars
+
+**Step 4 - Usage**: In templates `{{myMethod value}}` or SpringEL `#myMethod(value)`
 
 #### Helper Requirements
 
