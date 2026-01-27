@@ -108,8 +108,8 @@ flowchart TD
         G5 --> G6[Return GeneratedFile]
     end
 
-    Entry --> WriteDir
-    WriteDir --> GenFile
+    E4 --> W1
+    W6 --> G1
 ```
 
 ### Expression Evaluation Sequence
@@ -146,10 +146,11 @@ flowchart TD
         R5 --> R6[Return GeneratedFile]
     end
 
-    Parse --> Context
-    Parse --> Template
-    Context --> Runtime
-    Template --> Runtime
+    EX --> SEC
+    EX --> HT
+    V --> R1
+    IT --> R1
+    NT --> R1
 ```
 
 ## Key Files Reference
