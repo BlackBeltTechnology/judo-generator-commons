@@ -79,78 +79,74 @@ flowchart TD
 
 ### Complete Flow
 
+**1. ModelGenerator.generateToDirectory(GeneratorParameter)**
+
 ```mermaid
-flowchart TD
-    subgraph Entry["1. ModelGenerator.generateToDirectory"]
-        direction TB
-        E1[Setup logger] --> E2[Execute performExecutor]
-        E2 --> E3[Write actor-based files]
-        E3 --> E4[Write common files]
-    end
+flowchart LR
+    E1[Setup logger] --> E2[Execute performExecutor]
+    E2 --> E3[Write actor-based files]
+    E3 --> E4[Write common files]
+    E3 -.->|calls| WD[writeDirectory]
+    E4 -.->|calls| WD
+```
 
-    subgraph WriteDir["2. writeDirectory"]
-        direction TB
-        W1[Filter by condition] --> W2[Load ignore patterns]
-        W2 --> W3[Read checksums]
-        W3 --> W4[Validate checksums]
-        W4 --> W5[Write files]
-        W5 --> W6[Update index]
-    end
+**2. writeDirectory()**
 
-    subgraph GenFile["3. generateFile"]
-        direction TB
-        G1[Evaluate condition] --> G2[Evaluate path]
-        G2 --> G3{Copy mode?}
-        G3 -->|yes| G4a[Binary copy]
-        G3 -->|no| G4b[Apply template]
-        G4a --> G5[Set permissions]
-        G4b --> G5
-        G5 --> G6[Return GeneratedFile]
-    end
+```mermaid
+flowchart LR
+    W1[Filter by condition] --> W2[Load ignore patterns]
+    W2 --> W3[Read checksums]
+    W3 --> W4[Validate checksums]
+    W4 --> W5[Write files]
+    W5 --> W6[Update index]
+```
 
-    E4 --> W1
-    W6 --> G1
+**3. generateFile()**
+
+```mermaid
+flowchart LR
+    G1[Evaluate condition] --> G2[Evaluate path]
+    G2 --> G3{Copy mode?}
+    G3 -->|yes| G4a[Binary copy]
+    G3 -->|no| G4b[Apply template]
+    G4a --> G5[Set permissions]
+    G4b --> G5
+    G5 --> G6[Return GeneratedFile]
 ```
 
 ### Expression Evaluation Sequence
 
+**Initialization Phase**
+
 ```mermaid
 flowchart TD
-    subgraph Parse["1. Parsing Phase"]
-        direction TB
-        Y[YAML Template] --> J[Jackson Deserialization]
-        J --> GT[GeneratorTemplate]
-        GT --> SP[SpringEL Parser]
-        SP --> EX[Parse expressions]
-    end
+    Y[YAML Template] --> J[Jackson Deserialization]
+    J --> GT[GeneratorTemplate]
+    GT --> SP[SpringEL Parser]
+    SP --> EX1[factoryExpression]
+    SP --> EX2[pathExpression]
+    SP --> EX3[conditionExpression]
+    SP --> EX4[templateContext]
+    GT --> SEC[StandardEvaluationContext]
+    SEC --> H[Register helper methods]
+    SEC --> V[Set variables: self, model, actorType]
+    GT --> HT{templateName?}
+    HT -->|null| IT[Inline template]
+    HT -->|path| NT[Load from URL]
+    GT --> TE[TemplateEvaluator instantiation]
+```
 
-    subgraph Context["2. Context Setup"]
-        direction TB
-        SEC[StandardEvaluationContext] --> H[Register helpers]
-        H --> V[Set variables]
-    end
+**Runtime Phase (generateFile)**
 
-    subgraph Template["3. Template Setup"]
-        direction TB
-        HT{templateName?}
-        HT -->|null| IT[Inline template]
-        HT -->|path| NT[Load from URL]
-    end
-
-    subgraph Runtime["4. Runtime Execution"]
-        direction TB
-        R1[Evaluate condition] --> R2[Evaluate path]
-        R2 --> R3[Evaluate factory]
-        R3 --> R4[For each item]
-        R4 --> R5[Apply template]
-        R5 --> R6[Return GeneratedFile]
-    end
-
-    EX --> SEC
-    EX --> HT
-    V --> R1
-    IT --> R1
-    NT --> R1
+```mermaid
+flowchart LR
+    R1[Evaluate condition] --> R2[Evaluate path]
+    R2 --> R3[Evaluate factory]
+    R3 --> R4[For each item]
+    R4 --> R5[Build Handlebars Context]
+    R5 --> R6[Bind via contextAccessor]
+    R6 --> R7[Apply template]
+    R7 --> R8[Return GeneratedFile]
 ```
 
 ## Key Files Reference
