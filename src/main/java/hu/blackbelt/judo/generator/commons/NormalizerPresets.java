@@ -42,6 +42,12 @@ public final class NormalizerPresets {
                                 .pattern("^import\\s+.*?;\\s*$")
                                 .replacement("")
                                 .flags(List.of("MULTILINE"))
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
                                 .build()
                 ))
                 .build());
@@ -57,6 +63,12 @@ public final class NormalizerPresets {
                                 .pattern("^import\\s+.*?['\"];?\\s*$")
                                 .replacement("")
                                 .flags(List.of("MULTILINE"))
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
                                 .build()
                 ))
                 .build());
@@ -72,6 +84,12 @@ public final class NormalizerPresets {
                                 .pattern("^import\\s+.*?['\"];?\\s*$")
                                 .replacement("")
                                 .flags(List.of("MULTILINE"))
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
                                 .build()
                 ))
                 .build());
@@ -87,6 +105,12 @@ public final class NormalizerPresets {
                                 .pattern("^use\\s+.*?;\\s*$")
                                 .replacement("")
                                 .flags(List.of("MULTILINE"))
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
                                 .build()
                 ))
                 .build());
@@ -109,6 +133,12 @@ public final class NormalizerPresets {
                                 .pattern("^import\\s*\\([^)]*\\)\\s*$")
                                 .replacement("")
                                 .flags(List.of("MULTILINE", "DOTALL"))
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
                                 .build()
                 ))
                 .build());
@@ -129,6 +159,148 @@ public final class NormalizerPresets {
                                 .pattern("^from\\s+.*import.*$")
                                 .replacement("")
                                 .flags(List.of("MULTILINE"))
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
+                                .build()
+                ))
+                .build());
+
+        // XML preset
+        PRESETS.put("xml", FileTypeNormalizer.fileTypeNormalizerBuilder()
+                .extensions(List.of("xml"))
+                .removeDoubleSpaces(true)
+                .removeTabs(true)
+                .removeNewLines(false)
+                .patterns(List.of(
+                        // Remove XML comments
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("<!--[\\s\\S]*?-->")
+                                .replacement("")
+                                .flags(List.of())
+                                .build(),
+                        // Remove XML declarations
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("<\\?xml[^?]*\\?>")
+                                .replacement("")
+                                .flags(List.of())
+                                .build(),
+                        // Normalize whitespace between tags
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern(">\\s+<")
+                                .replacement("><")
+                                .flags(List.of())
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
+                                .build(),
+                        // Remove leading whitespace
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("^\\s+")
+                                .replacement("")
+                                .flags(List.of())
+                                .build(),
+                        // Remove trailing whitespace
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\s+$")
+                                .replacement("")
+                                .flags(List.of())
+                                .build()
+                ))
+                .build());
+
+        // HTML preset
+        PRESETS.put("html", FileTypeNormalizer.fileTypeNormalizerBuilder()
+                .extensions(List.of("html", "htm"))
+                .removeDoubleSpaces(true)
+                .removeTabs(true)
+                .removeNewLines(false)
+                .patterns(List.of(
+                        // Remove HTML comments
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("<!--[\\s\\S]*?-->")
+                                .replacement("")
+                                .flags(List.of())
+                                .build(),
+                        // Normalize whitespace between tags
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern(">\\s+<")
+                                .replacement("><")
+                                .flags(List.of())
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
+                                .build(),
+                        // Remove leading whitespace
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("^\\s+")
+                                .replacement("")
+                                .flags(List.of())
+                                .build(),
+                        // Remove trailing whitespace
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\s+$")
+                                .replacement("")
+                                .flags(List.of())
+                                .build()
+                ))
+                .build());
+
+        // CSS preset
+        PRESETS.put("css", FileTypeNormalizer.fileTypeNormalizerBuilder()
+                .extensions(List.of("css"))
+                .removeDoubleSpaces(true)
+                .removeTabs(true)
+                .removeNewLines(false)
+                .patterns(List.of(
+                        // Remove CSS comments
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("/\\*[\\s\\S]*?\\*/")
+                                .replacement("")
+                                .flags(List.of())
+                                .build(),
+                        // Collapse multiple newlines to single
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\n{2,}")
+                                .replacement("\n")
+                                .flags(List.of())
+                                .build(),
+                        // Remove leading whitespace
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("^\\s+")
+                                .replacement("")
+                                .flags(List.of())
+                                .build(),
+                        // Remove trailing whitespace
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\s+$")
+                                .replacement("")
+                                .flags(List.of())
+                                .build()
+                ))
+                .build());
+
+        // JSON preset
+        PRESETS.put("json", FileTypeNormalizer.fileTypeNormalizerBuilder()
+                .extensions(List.of("json"))
+                .removeDoubleSpaces(true)
+                .removeTabs(true)
+                .removeNewLines(true)
+                .patterns(List.of(
+                        // Remove spaces outside of strings (simplified: remove spaces around structural chars)
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("\\s*([{}\\[\\]:,])\\s*")
+                                .replacement("$1")
+                                .flags(List.of())
                                 .build()
                 ))
                 .build());
@@ -141,8 +313,9 @@ public final class NormalizerPresets {
     /**
      * Gets a preset by name.
      * The "auto" preset returns all language presets.
+     * The "none" preset returns an empty collection (disables normalization).
      *
-     * @param presetName the preset name (e.g., "java", "ts", "auto")
+     * @param presetName the preset name (e.g., "java", "ts", "auto", "none")
      * @return a collection of normalizers for the preset
      * @throws IllegalArgumentException if the preset name is unknown
      */
@@ -153,6 +326,11 @@ public final class NormalizerPresets {
 
         String name = presetName.toLowerCase();
 
+        if ("none".equals(name)) {
+            // Return empty collection to disable normalization
+            return Collections.emptyList();
+        }
+
         if ("auto".equals(name)) {
             // Return all presets
             return new ArrayList<>(PRESETS.values());
@@ -161,7 +339,7 @@ public final class NormalizerPresets {
         FileTypeNormalizer preset = PRESETS.get(name);
         if (preset == null) {
             throw new IllegalArgumentException("Unknown preset: " + presetName +
-                    ". Available presets: auto, " + String.join(", ", getAvailablePresets()));
+                    ". Available presets: auto, none, " + String.join(", ", getAvailablePresets()));
         }
 
         return Collections.singletonList(preset);
@@ -182,13 +360,13 @@ public final class NormalizerPresets {
      * Checks if a preset exists.
      *
      * @param presetName the preset name
-     * @return true if the preset exists (including "auto")
+     * @return true if the preset exists (including "auto" and "none")
      */
     public static boolean hasPreset(String presetName) {
         if (presetName == null || presetName.isEmpty()) {
             return false;
         }
         String name = presetName.toLowerCase();
-        return "auto".equals(name) || PRESETS.containsKey(name);
+        return "auto".equals(name) || "none".equals(name) || PRESETS.containsKey(name);
     }
 }

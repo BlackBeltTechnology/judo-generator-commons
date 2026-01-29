@@ -1135,6 +1135,343 @@ public class ModelGeneratorRealWorldTest {
         );
     }
 
+// ========== Normalized Comparison Tests for New File Types (8.x) ==========
+
+    @Test
+    void testNormalizedComparisonForXmlFiles() throws IOException {
+        // Given: Generated XML file with normalizer configured
+        String originalContent = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <root>
+                <child>value</child>
+            </root>
+            """;
+
+        FileNormalizerRegistry registry = FileNormalizerRegistry.fromConfigs(
+            NormalizerPresets.getPreset("xml")
+        );
+
+        Collection<GeneratedFile> files = ImmutableList.of(
+            GeneratedFile.builder()
+                .path("config.xml")
+                .content(originalContent.getBytes(StandardCharsets.UTF_8))
+                .build()
+        );
+
+        ModelGenerator.writeDirectory(
+            files,
+            tmpTargetDir.toFile(),
+            ModelGenerator.GENERATED_FILES,
+            true,
+            registry
+        );
+
+        // When: File is modified with comments and different whitespace
+        Path xmlFile = absolutePathFor("config.xml");
+        String formattedContent = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!-- This is a comment -->
+            <root>
+              <child>value</child>
+            </root>
+            """;
+        Files.write(xmlFile, formattedContent.getBytes(StandardCharsets.UTF_8));
+
+        // Then: Regeneration with normalizer should succeed (comments/whitespace ignored)
+        assertDoesNotThrow(
+            () ->
+                ModelGenerator.writeDirectory(
+                    files,
+                    tmpTargetDir.toFile(),
+                    ModelGenerator.GENERATED_FILES,
+                    true,
+                    registry
+                ),
+            "Should accept XML with added comments and whitespace changes"
+        );
+
+        // And: File content is preserved
+        String afterContent = Files.readString(xmlFile);
+        assertEquals(formattedContent, afterContent, "Formatted content should be preserved");
+    }
+
+    @Test
+    void testNormalizedComparisonForHtmlFiles() throws IOException {
+        // Given: Generated HTML file with normalizer configured
+        String originalContent = """
+            <html>
+                <body>
+                    <div>Hello</div>
+                </body>
+            </html>
+            """;
+
+        FileNormalizerRegistry registry = FileNormalizerRegistry.fromConfigs(
+            NormalizerPresets.getPreset("html")
+        );
+
+        Collection<GeneratedFile> files = ImmutableList.of(
+            GeneratedFile.builder()
+                .path("index.html")
+                .content(originalContent.getBytes(StandardCharsets.UTF_8))
+                .build()
+        );
+
+        ModelGenerator.writeDirectory(
+            files,
+            tmpTargetDir.toFile(),
+            ModelGenerator.GENERATED_FILES,
+            true,
+            registry
+        );
+
+        // When: File is modified with comments and different indentation
+        Path htmlFile = absolutePathFor("index.html");
+        String formattedContent = """
+            <!-- Generated page -->
+            <html>
+              <body>
+                <div>Hello</div>
+              </body>
+            </html>
+            """;
+        Files.write(htmlFile, formattedContent.getBytes(StandardCharsets.UTF_8));
+
+        // Then: Regeneration with normalizer should succeed
+        assertDoesNotThrow(
+            () ->
+                ModelGenerator.writeDirectory(
+                    files,
+                    tmpTargetDir.toFile(),
+                    ModelGenerator.GENERATED_FILES,
+                    true,
+                    registry
+                ),
+            "Should accept HTML with added comments and whitespace changes"
+        );
+    }
+
+    @Test
+    void testNormalizedComparisonForCssFiles() throws IOException {
+        // Given: Generated CSS file with normalizer configured
+        String originalContent = """
+            .container {
+                display: flex;
+                padding: 10px;
+            }
+            """;
+
+        FileNormalizerRegistry registry = FileNormalizerRegistry.fromConfigs(
+            NormalizerPresets.getPreset("css")
+        );
+
+        Collection<GeneratedFile> files = ImmutableList.of(
+            GeneratedFile.builder()
+                .path("styles.css")
+                .content(originalContent.getBytes(StandardCharsets.UTF_8))
+                .build()
+        );
+
+        ModelGenerator.writeDirectory(
+            files,
+            tmpTargetDir.toFile(),
+            ModelGenerator.GENERATED_FILES,
+            true,
+            registry
+        );
+
+        // When: File is modified with comments
+        Path cssFile = absolutePathFor("styles.css");
+        String formattedContent = """
+            /* Container styles */
+            .container {
+                display: flex;
+                padding: 10px;
+            }
+            """;
+        Files.write(cssFile, formattedContent.getBytes(StandardCharsets.UTF_8));
+
+        // Then: Regeneration with normalizer should succeed (comments ignored)
+        assertDoesNotThrow(
+            () ->
+                ModelGenerator.writeDirectory(
+                    files,
+                    tmpTargetDir.toFile(),
+                    ModelGenerator.GENERATED_FILES,
+                    true,
+                    registry
+                ),
+            "Should accept CSS with added comments"
+        );
+    }
+
+    @Test
+    void testNormalizedComparisonForJsonFiles() throws IOException {
+        // Given: Generated JSON file with normalizer configured
+        String originalContent = "{\"name\":\"test\",\"value\":42}";
+
+        FileNormalizerRegistry registry = FileNormalizerRegistry.fromConfigs(
+            NormalizerPresets.getPreset("json")
+        );
+
+        Collection<GeneratedFile> files = ImmutableList.of(
+            GeneratedFile.builder()
+                .path("config.json")
+                .content(originalContent.getBytes(StandardCharsets.UTF_8))
+                .build()
+        );
+
+        ModelGenerator.writeDirectory(
+            files,
+            tmpTargetDir.toFile(),
+            ModelGenerator.GENERATED_FILES,
+            true,
+            registry
+        );
+
+        // When: File is formatted with pretty printing
+        Path jsonFile = absolutePathFor("config.json");
+        String formattedContent = """
+            {
+              "name": "test",
+              "value": 42
+            }""";
+        Files.write(jsonFile, formattedContent.getBytes(StandardCharsets.UTF_8));
+
+        // Then: Regeneration with normalizer should succeed (whitespace ignored)
+        assertDoesNotThrow(
+            () ->
+                ModelGenerator.writeDirectory(
+                    files,
+                    tmpTargetDir.toFile(),
+                    ModelGenerator.GENERATED_FILES,
+                    true,
+                    registry
+                ),
+            "Should accept JSON with different formatting"
+        );
+    }
+
+    @Test
+    void testNormalizedComparisonRejectsXmlContentChanges() throws IOException {
+        // Given: Generated XML file with normalizer configured
+        String originalContent = """
+            <root>
+                <child>original</child>
+            </root>
+            """;
+
+        FileNormalizerRegistry registry = FileNormalizerRegistry.fromConfigs(
+            NormalizerPresets.getPreset("xml")
+        );
+
+        Collection<GeneratedFile> files = ImmutableList.of(
+            GeneratedFile.builder()
+                .path("config.xml")
+                .content(originalContent.getBytes(StandardCharsets.UTF_8))
+                .build()
+        );
+
+        ModelGenerator.writeDirectory(
+            files,
+            tmpTargetDir.toFile(),
+            ModelGenerator.GENERATED_FILES,
+            true,
+            registry
+        );
+
+        // When: File is modified with actual content change
+        Path xmlFile = absolutePathFor("config.xml");
+        String modifiedContent = """
+            <root>
+                <child>modified</child>
+            </root>
+            """;
+        Files.write(xmlFile, modifiedContent.getBytes(StandardCharsets.UTF_8));
+
+        // Then: Should throw even with normalizer
+        assertThrows(
+            IllegalStateException.class,
+            () ->
+                ModelGenerator.writeDirectory(
+                    files,
+                    tmpTargetDir.toFile(),
+                    ModelGenerator.GENERATED_FILES,
+                    true,
+                    registry
+                ),
+            "Should reject actual XML content changes even with normalizer"
+        );
+    }
+
+    @Test
+    void testAutoPresetNormalizesAllSupportedFileTypes() throws IOException {
+        // Given: Multiple file types with auto preset
+        FileNormalizerRegistry registry = FileNormalizerRegistry.fromConfigs(
+            NormalizerPresets.getPreset("auto")
+        );
+
+        Collection<GeneratedFile> files = ImmutableList.of(
+            GeneratedFile.builder()
+                .path("Service.java")
+                .content("import java.util.List;\npublic class Service {}".getBytes(StandardCharsets.UTF_8))
+                .build(),
+            GeneratedFile.builder()
+                .path("config.xml")
+                .content("<root><child/></root>".getBytes(StandardCharsets.UTF_8))
+                .build(),
+            GeneratedFile.builder()
+                .path("styles.css")
+                .content(".class { color: red; }".getBytes(StandardCharsets.UTF_8))
+                .build(),
+            GeneratedFile.builder()
+                .path("data.json")
+                .content("{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8))
+                .build()
+        );
+
+        ModelGenerator.writeDirectory(
+            files,
+            tmpTargetDir.toFile(),
+            ModelGenerator.GENERATED_FILES,
+            true,
+            registry
+        );
+
+        // When: Files are modified with whitespace/comment changes
+        Files.write(
+            absolutePathFor("Service.java"),
+            "import java.util.Map;\nimport java.util.List;\npublic class Service {}".getBytes(StandardCharsets.UTF_8)
+        );
+        Files.write(
+            absolutePathFor("config.xml"),
+            "<!-- comment --><root>  <child/>  </root>".getBytes(StandardCharsets.UTF_8)
+        );
+        Files.write(
+            absolutePathFor("styles.css"),
+            "/* comment */ .class { color: red; }".getBytes(StandardCharsets.UTF_8)
+        );
+        Files.write(
+            absolutePathFor("data.json"),
+            "{\n  \"key\": \"value\"\n}".getBytes(StandardCharsets.UTF_8)
+        );
+
+        // Then: All regenerations should succeed
+        assertDoesNotThrow(
+            () ->
+                ModelGenerator.writeDirectory(
+                    files,
+                    tmpTargetDir.toFile(),
+                    ModelGenerator.GENERATED_FILES,
+                    true,
+                    registry
+                ),
+            "Auto preset should normalize all supported file types"
+        );
+    }
+
+    // ========== Edge Case Tests (7.x) ==========
+
     @Test
     void testHandleUnicodeContent() {
         // Given: File with Unicode content

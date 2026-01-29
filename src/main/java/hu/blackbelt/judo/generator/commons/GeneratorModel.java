@@ -55,8 +55,39 @@ public class GeneratorModel {
     @Builder.Default
     private Collection<GeneratorTemplate> templates = new HashSet<>();
 
+    /**
+     * Whether to normalize file content before checksum comparison.
+     * When true, uses fileNormalizers to normalize content (default: true).
+     * Uses Boolean wrapper to distinguish between "not specified" (null) and explicit "false".
+     * The getter returns true if null (default behavior).
+     */
     @Builder.Default
-    private Collection<FileTypeNormalizer> fileNormalizers = new ArrayList<>();
+    private Boolean normalizeContent = null;
+
+    /**
+     * File normalizers for content comparison during checksum validation.
+     * Defaults to the "auto" preset which covers common programming languages.
+     * Note: Field initialization ensures default works for both Jackson and Lombok.
+     */
+    @Builder.Default
+    private Collection<FileTypeNormalizer> fileNormalizers = getDefaultFileNormalizers();
+
+    /**
+     * Returns the default file normalizers (auto preset).
+     * This method ensures the default is applied consistently for both
+     * Jackson deserialization (via field initialization) and Lombok builder.
+     */
+    private static Collection<FileTypeNormalizer> getDefaultFileNormalizers() {
+        return new ArrayList<>(NormalizerPresets.getPreset("auto"));
+    }
+
+    /**
+     * Returns whether content normalization is enabled.
+     * Defaults to true if not explicitly set.
+     */
+    public boolean isNormalizeContent() {
+        return normalizeContent == null || normalizeContent;
+    }
 
     public static GeneratorModel loadYamlURL(
         String originalUri,
@@ -87,6 +118,11 @@ public class GeneratorModel {
             );
             if (model.getTemplates() == null) {
                 model.setTemplates(new ArrayList<>());
+            }
+            // Apply default fileNormalizers if not specified in YAML
+            // Jackson deserialization doesn't use @Builder.Default values
+            if (model.getFileNormalizers() == null || model.getFileNormalizers().isEmpty()) {
+                model.setFileNormalizers(getDefaultFileNormalizers());
             }
             model
                 .getTemplates()

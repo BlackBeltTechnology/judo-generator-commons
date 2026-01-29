@@ -90,6 +90,8 @@ flowchart LR
     E4 -.->|calls| WD
 ```
 
+---
+
 **2. writeDirectory()**
 
 ```mermaid
@@ -100,6 +102,8 @@ flowchart LR
     W4 --> W5[Write files]
     W5 --> W6[Update index]
 ```
+
+---
 
 **3. generateFile()**
 
@@ -135,6 +139,8 @@ flowchart TD
     HT -->|path| NT[Load from URL]
     GT --> TE[TemplateEvaluator instantiation]
 ```
+
+---
 
 **Runtime Phase (generateFile)**
 

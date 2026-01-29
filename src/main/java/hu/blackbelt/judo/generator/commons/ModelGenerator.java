@@ -33,6 +33,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -314,17 +315,26 @@ public class ModelGenerator<M> {
                     )
                 );
 
-        // Delete files which is presented in the saved entry collection and presented in the filesystem, but it's not presented
-        // in the saved collection
+        // Delete files which exist on filesystem (from previous generation) but are not in the newly generated output.
+        // Files in .generator-ignore are protected from deletion.
         filesystemFileEntryCollection
             .parallelStream()
             .filter(f -> !generatorFileEntryMap.containsKey(f.getPath()))
-            .filter(f ->
-                !generatorIgnore.shouldExcludeFile(
-                    new File(targetDirectory, f.getPath()).toPath()
-                )
-            )
-            .forEach(f -> new File(targetDirectory, f.getPath()).delete());
+            .filter(f -> {
+                Path filePath = new File(targetDirectory, f.getPath()).toPath();
+                boolean isIgnored = generatorIgnore.shouldExcludeFile(filePath);
+                if (isIgnored) {
+                    log.debug("File '{}' is in .generator-ignore, skipping deletion", f.getPath());
+                }
+                return !isIgnored;
+            })
+            .forEach(f -> {
+                File fileToDelete = new File(targetDirectory, f.getPath());
+                log.info("Deleting stale generated file: {}", f.getPath());
+                if (!fileToDelete.delete()) {
+                    log.warn("Failed to delete file: {}", fileToDelete.getAbsolutePath());
+                }
+            });
 
         // Build content map for normalized comparison (if normalizer registry is provided)
         ContentComparator contentComparator = normalizerRegistry != null &&
@@ -613,12 +623,16 @@ public class ModelGenerator<M> {
         );
         readGeneratedFiles(targetDirectory, generatorFilesName)
             .stream()
-            .filter(f ->
-                !generatorIgnore.shouldExcludeFile(
-                    new File(targetDirectory, f.getPath()).toPath()
-                )
-            )
+            .filter(f -> {
+                Path filePath = new File(targetDirectory, f.getPath()).toPath();
+                boolean isIgnored = generatorIgnore.shouldExcludeFile(filePath);
+                if (isIgnored) {
+                    log.debug("File '{}' is in .generator-ignore, skipping clean deletion", f.getPath());
+                }
+                return !isIgnored;
+            })
             .forEach(e -> {
+                log.info("Cleaning generated file: {}", e.getPath());
                 deleteExitingFileInDirectory(targetDirectory, e.getPath());
             });
     }
@@ -641,11 +655,14 @@ public class ModelGenerator<M> {
 
     public static void deleteExitingFileInDirectory(
         File targetDirectory,
-        String generatorFilesName
+        String filePath
     ) {
-        File f = new File(targetDirectory, generatorFilesName);
+        File f = new File(targetDirectory, filePath);
         if (f.exists()) {
-            f.delete();
+            log.debug("Deleting file: {}", f.getAbsolutePath());
+            if (!f.delete()) {
+                log.warn("Failed to delete file: {}", f.getAbsolutePath());
+            }
         }
     }
 
@@ -893,6 +910,8 @@ public class ModelGenerator<M> {
                 parameter
             );
 
+            FileNormalizerRegistry effectiveRegistry = parameter.getEffectiveNormalizerRegistry();
+
             result.generatedByDiscriminator
                 .entrySet()
                 .stream()
@@ -904,13 +923,15 @@ public class ModelGenerator<M> {
                         parameter.getDiscriminatorTargetDirectoryResolver(),
                         parameter.getDiscriminatorTargetNameResolver(),
                         parameter.isValidateChecksum(),
-                        log
+                        log,
+                        effectiveRegistry
                     )
                 );
             getDirectoryWriter(
                 parameter.targetDirectoryResolver,
                 parameter.isValidateChecksum(),
-                log
+                log,
+                effectiveRegistry
             ).accept(result.generated);
         } finally {
             if (loggerToBeClosed.get()) {

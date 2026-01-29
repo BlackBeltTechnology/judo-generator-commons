@@ -29,6 +29,55 @@ import org.junit.jupiter.api.Test;
 class NormalizerPresetsTest {
 
     @Test
+    void testGeneratorModelDefaultsForBuilder() {
+        // Test that GeneratorModel builder applies defaults
+        GeneratorModel model = GeneratorModel.generatorModelBuilder().build();
+        
+        assertTrue(model.isNormalizeContent(), "normalizeContent should default to true");
+        assertNotNull(model.getFileNormalizers(), "fileNormalizers should not be null");
+        assertFalse(model.getFileNormalizers().isEmpty(), "fileNormalizers should default to auto preset");
+        
+        // Verify it contains expected extensions from auto preset
+        List<String> allExtensions = model.getFileNormalizers()
+            .stream()
+            .flatMap(p -> p.getExtensions().stream())
+            .toList();
+        assertTrue(allExtensions.contains("java"), "Should contain java extension");
+        assertTrue(allExtensions.contains("ts"), "Should contain ts extension");
+        assertTrue(allExtensions.contains("xml"), "Should contain xml extension");
+    }
+
+    @Test
+    void testGeneratorModelDefaultsForNoArgsConstructor() {
+        // Test that no-args constructor (used by Jackson) also has defaults
+        // This simulates what happens when Jackson deserializes without fileNormalizers in YAML
+        GeneratorModel model = new GeneratorModel();
+        
+        // normalizeContent uses Boolean wrapper, null means "use default" (true)
+        assertTrue(model.isNormalizeContent(), "normalizeContent should default to true when null");
+        assertNotNull(model.getFileNormalizers(), "fileNormalizers should not be null");
+        assertFalse(model.getFileNormalizers().isEmpty(), "fileNormalizers should default to auto preset");
+    }
+
+    @Test
+    void testNormalizeContentExplicitFalse() {
+        // Test that explicit false is respected
+        GeneratorModel model = new GeneratorModel();
+        model.setNormalizeContent(false);
+        
+        assertFalse(model.isNormalizeContent(), "normalizeContent should be false when explicitly set");
+    }
+
+    @Test
+    void testNormalizeContentExplicitTrue() {
+        // Test that explicit true works
+        GeneratorModel model = new GeneratorModel();
+        model.setNormalizeContent(true);
+        
+        assertTrue(model.isNormalizeContent(), "normalizeContent should be true when explicitly set");
+    }
+
+    @Test
     void testJavaPreset() {
         Collection<FileTypeNormalizer> presets = NormalizerPresets.getPreset(
             "java"
@@ -134,10 +183,131 @@ class NormalizerPresetsTest {
         assertTrue(normalizer.isRemoveDoubleSpaces());
         assertTrue(normalizer.isRemoveTabs());
 
-        // Test import removal
+        // Test import removal (multiple newlines collapsed)
         String input = "import os\nfrom sys import path\n\ndef main(): pass";
-        String expected = "\n\n\ndef main(): pass";
+        String expected = "\ndef main(): pass";
         assertEquals(expected, normalizer.normalize(input));
+    }
+
+    @Test
+    void testXmlPreset() {
+        Collection<FileTypeNormalizer> presets = NormalizerPresets.getPreset(
+            "xml"
+        );
+
+        assertEquals(1, presets.size());
+        FileTypeNormalizer normalizer = presets.iterator().next();
+
+        assertTrue(normalizer.getExtensions().contains("xml"));
+        assertTrue(normalizer.isRemoveDoubleSpaces());
+        assertTrue(normalizer.isRemoveTabs());
+        assertFalse(normalizer.isRemoveNewLines());
+
+        // Test comment removal
+        String inputWithComment = "<root><!-- comment --><child/></root>";
+        String expectedNoComment = "<root><child/></root>";
+        assertEquals(expectedNoComment, normalizer.normalize(inputWithComment));
+
+        // Test XML declaration removal
+        String inputWithDeclaration = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>";
+        String expectedNoDeclaration = "<root/>";
+        assertEquals(expectedNoDeclaration, normalizer.normalize(inputWithDeclaration));
+
+        // Test whitespace normalization between tags (also strips leading/trailing)
+        String inputWithWhitespace = "  <root>  \n  <child/>  \n  </root>  ";
+        String expectedNormalized = "<root><child/></root>";
+        assertEquals(expectedNormalized, normalizer.normalize(inputWithWhitespace));
+    }
+
+    @Test
+    void testHtmlPreset() {
+        Collection<FileTypeNormalizer> presets = NormalizerPresets.getPreset(
+            "html"
+        );
+
+        assertEquals(1, presets.size());
+        FileTypeNormalizer normalizer = presets.iterator().next();
+
+        assertTrue(normalizer.getExtensions().contains("html"));
+        assertTrue(normalizer.getExtensions().contains("htm"));
+        assertTrue(normalizer.isRemoveDoubleSpaces());
+        assertTrue(normalizer.isRemoveTabs());
+        assertFalse(normalizer.isRemoveNewLines());
+
+        // Test comment removal
+        String inputWithComment = "<div><!-- comment --><span/></div>";
+        String expectedNoComment = "<div><span/></div>";
+        assertEquals(expectedNoComment, normalizer.normalize(inputWithComment));
+
+        // Test whitespace normalization between tags (also strips leading/trailing)
+        String inputWithWhitespace = "  <div>  \n  <span/>  \n  </div>  ";
+        String expectedNormalized = "<div><span/></div>";
+        assertEquals(expectedNormalized, normalizer.normalize(inputWithWhitespace));
+    }
+
+    @Test
+    void testCssPreset() {
+        Collection<FileTypeNormalizer> presets = NormalizerPresets.getPreset(
+            "css"
+        );
+
+        assertEquals(1, presets.size());
+        FileTypeNormalizer normalizer = presets.iterator().next();
+
+        assertTrue(normalizer.getExtensions().contains("css"));
+        assertTrue(normalizer.isRemoveDoubleSpaces());
+        assertTrue(normalizer.isRemoveTabs());
+        assertFalse(normalizer.isRemoveNewLines());
+
+        // Test comment removal (double space after removal gets collapsed to single)
+        String inputWithComment = ".class { /* comment */ color: red; }";
+        String expectedNoComment = ".class { color: red; }";
+        assertEquals(expectedNoComment, normalizer.normalize(inputWithComment));
+
+        // Test multiline comment removal (multiple newlines collapsed to single)
+        String inputWithMultilineComment = ".class {\n/* multi\nline\ncomment */\ncolor: red;\n}";
+        String expectedNoMultilineComment = ".class {\ncolor: red;\n}";
+        assertEquals(expectedNoMultilineComment, normalizer.normalize(inputWithMultilineComment));
+    }
+
+    @Test
+    void testJsonPreset() {
+        Collection<FileTypeNormalizer> presets = NormalizerPresets.getPreset(
+            "json"
+        );
+
+        assertEquals(1, presets.size());
+        FileTypeNormalizer normalizer = presets.iterator().next();
+
+        assertTrue(normalizer.getExtensions().contains("json"));
+        assertTrue(normalizer.isRemoveDoubleSpaces());
+        assertTrue(normalizer.isRemoveTabs());
+        assertTrue(normalizer.isRemoveNewLines()); // JSON removes newlines
+
+        // Test whitespace normalization (all whitespace around structural chars removed)
+        String inputFormatted = "{\n  \"key\": \"value\",\n  \"number\": 42\n}";
+        String expectedMinified = "{\"key\":\"value\",\"number\":42}";
+        assertEquals(expectedMinified, normalizer.normalize(inputFormatted));
+
+        // Test with tabs
+        String inputWithTabs = "{\t\"key\":\t\"value\"}";
+        String expectedNoTabs = "{\"key\":\"value\"}";
+        assertEquals(expectedNoTabs, normalizer.normalize(inputWithTabs));
+
+        // Test pretty printed vs minified are equal after normalization
+        String minified = "{\"name\":\"test\",\"values\":[1,2,3]}";
+        String pretty = "{\n  \"name\": \"test\",\n  \"values\": [\n    1,\n    2,\n    3\n  ]\n}";
+        assertEquals(normalizer.normalize(minified), normalizer.normalize(pretty));
+    }
+
+    @Test
+    void testNonePreset() {
+        Collection<FileTypeNormalizer> presets = NormalizerPresets.getPreset(
+            "none"
+        );
+
+        // None should return empty collection
+        assertTrue(presets.isEmpty());
     }
 
     @Test
@@ -146,8 +316,8 @@ class NormalizerPresetsTest {
             "auto"
         );
 
-        // Auto should return all presets
-        assertTrue(presets.size() >= 6);
+        // Auto should return all presets (10 now: java, ts, js, rust, go, python, xml, html, css, json)
+        assertTrue(presets.size() >= 10);
 
         // Verify all language presets are included
         List<String> allExtensions = presets
@@ -162,6 +332,11 @@ class NormalizerPresetsTest {
         assertTrue(allExtensions.contains("rs"));
         assertTrue(allExtensions.contains("go"));
         assertTrue(allExtensions.contains("py"));
+        assertTrue(allExtensions.contains("xml"));
+        assertTrue(allExtensions.contains("html"));
+        assertTrue(allExtensions.contains("htm"));
+        assertTrue(allExtensions.contains("css"));
+        assertTrue(allExtensions.contains("json"));
     }
 
     @Test
@@ -202,13 +377,23 @@ class NormalizerPresetsTest {
         assertTrue(presets.contains("rust"));
         assertTrue(presets.contains("go"));
         assertTrue(presets.contains("python"));
+        assertTrue(presets.contains("xml"));
+        assertTrue(presets.contains("html"));
+        assertTrue(presets.contains("css"));
+        assertTrue(presets.contains("json"));
         assertFalse(presets.contains("auto")); // auto is not in the list
+        assertFalse(presets.contains("none")); // none is not in the list
     }
 
     @Test
     void testHasPreset() {
         assertTrue(NormalizerPresets.hasPreset("java"));
         assertTrue(NormalizerPresets.hasPreset("auto"));
+        assertTrue(NormalizerPresets.hasPreset("none"));
+        assertTrue(NormalizerPresets.hasPreset("xml"));
+        assertTrue(NormalizerPresets.hasPreset("html"));
+        assertTrue(NormalizerPresets.hasPreset("css"));
+        assertTrue(NormalizerPresets.hasPreset("json"));
         assertTrue(NormalizerPresets.hasPreset("JAVA"));
         assertFalse(NormalizerPresets.hasPreset("unknown"));
         assertFalse(NormalizerPresets.hasPreset(null));

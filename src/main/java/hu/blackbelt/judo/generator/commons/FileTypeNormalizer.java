@@ -77,8 +77,8 @@ public class FileTypeNormalizer {
      *
      * Normalization order:
      * 1. Line ending normalization (CRLF → LF) - always applied first
-     * 2. Boolean flag normalizers (tabs → double spaces → newlines)
-     * 3. Custom regex patterns (in configured order)
+     * 2. Custom regex patterns (in configured order)
+     * 3. Boolean flag normalizers (tabs → double spaces → newlines)
      *
      * @param content the content to normalize
      * @return the normalized content
@@ -93,7 +93,14 @@ public class FileTypeNormalizer {
         // 1. Always normalize line endings first (CRLF → LF)
         result = result.replace("\r\n", "\n");
 
-        // 2. Apply boolean flag normalizers in order: tabs → double spaces → newlines
+        // 2. Apply custom regex patterns in order (before whitespace normalization)
+        if (patterns != null) {
+            for (NormalizerPattern pattern : patterns) {
+                result = pattern.apply(result);
+            }
+        }
+
+        // 3. Apply boolean flag normalizers in order: tabs → double spaces → newlines
         if (removeTabs) {
             result = result.replace("\t", "");
         }
@@ -102,13 +109,6 @@ public class FileTypeNormalizer {
         }
         if (removeNewLines) {
             result = result.replace("\n", "");
-        }
-
-        // 3. Apply custom regex patterns in order
-        if (patterns != null) {
-            for (NormalizerPattern pattern : patterns) {
-                result = pattern.apply(result);
-            }
         }
 
         return result;
