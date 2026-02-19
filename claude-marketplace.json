@@ -1,0 +1,11 @@
+{
+  "name": "judo-generator-commons-marketplace",
+  "description": "Claude Code skills for JUDO code generation framework",
+  "plugins": [
+    {
+      "name": "generate-helper",
+      "source": "./.claude/skills/generate-helper",
+      "description": "Create a new Handlebars helper class with tests"
+    }
+  ]
+}

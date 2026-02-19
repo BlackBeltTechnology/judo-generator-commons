@@ -59,4 +59,28 @@ public final class GeneratorParameter<T> {
 
     @Builder.Default
     boolean validateChecksum = true;
+
+    /**
+     * Optional normalizer registry for whitespace-tolerant file comparison.
+     * If null and generatorContext is set, will be built from generatorContext.generatorModel.
+     */
+    @Builder.Default
+    FileNormalizerRegistry normalizerRegistry = null;
+
+    /**
+     * Gets the effective normalizer registry.
+     * If explicitly set, returns that. Otherwise builds from generatorContext if available.
+     */
+    public FileNormalizerRegistry getEffectiveNormalizerRegistry() {
+        if (normalizerRegistry != null) {
+            return normalizerRegistry;
+        }
+        if (generatorContext != null && generatorContext.getGeneratorModel() != null) {
+            GeneratorModel model = generatorContext.getGeneratorModel();
+            if (model.isNormalizeContent() && model.getFileNormalizers() != null && !model.getFileNormalizers().isEmpty()) {
+                return FileNormalizerRegistry.fromConfigs(model.getFileNormalizers());
+            }
+        }
+        return null;
+    }
 }
