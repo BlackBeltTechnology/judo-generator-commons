@@ -121,6 +121,116 @@ class NormalizerPresetsTest {
     }
 
     @Test
+    void testTypeScriptQuoteNormalization() {
+        FileTypeNormalizer normalizer = NormalizerPresets.getPreset("ts").iterator().next();
+
+        // Single quotes should be normalized to double quotes
+        assertEquals(
+            "const x = \"hello\"",
+            normalizer.normalize("const x = 'hello'")
+        );
+
+        // Double quotes should remain unchanged
+        assertEquals(
+            "const x = \"hello\"",
+            normalizer.normalize("const x = \"hello\"")
+        );
+
+        // Escaped quotes inside single-quoted strings
+        assertEquals(
+            "const x = \"it\\'s fine\"",
+            normalizer.normalize("const x = 'it\\'s fine'")
+        );
+
+        // Both quote styles normalize to same result
+        assertEquals(
+            normalizer.normalize("const x = 'hello'"),
+            normalizer.normalize("const x = \"hello\"")
+        );
+    }
+
+    @Test
+    void testTypeScriptTrailingCommas() {
+        FileTypeNormalizer normalizer = NormalizerPresets.getPreset("ts").iterator().next();
+
+        // Trailing comma before } should be removed (along with whitespace between comma and bracket)
+        assertEquals(
+            "const obj = { a: 1}",
+            normalizer.normalize("const obj = { a: 1,}")
+        );
+        assertEquals(
+            "const obj = { a: 1}",
+            normalizer.normalize("const obj = { a: 1, }")
+        );
+
+        // Trailing comma before ] should be removed
+        assertEquals(
+            "const arr = [1, 2, 3]",
+            normalizer.normalize("const arr = [1, 2, 3,]")
+        );
+
+        // Trailing comma before ) should be removed
+        assertEquals(
+            "foo(a, b)",
+            normalizer.normalize("foo(a, b,)")
+        );
+
+        // With and without trailing commas normalize to same result
+        assertEquals(
+            normalizer.normalize("const obj = { a: 1, b: 2}"),
+            normalizer.normalize("const obj = { a: 1, b: 2, }")
+        );
+    }
+
+    @Test
+    void testTypeScriptSemicolonNormalization() {
+        FileTypeNormalizer normalizer = NormalizerPresets.getPreset("ts").iterator().next();
+
+        // Semicolons at end of lines should be removed
+        assertEquals(
+            "const x = 1\nconst y = 2",
+            normalizer.normalize("const x = 1;\nconst y = 2;")
+        );
+
+        // With and without semicolons normalize to same result
+        assertEquals(
+            normalizer.normalize("const x = 1;\nconst y = 2;"),
+            normalizer.normalize("const x = 1\nconst y = 2")
+        );
+    }
+
+    @Test
+    void testTypeScriptBiomeFormattingEquivalence() {
+        FileTypeNormalizer normalizer = NormalizerPresets.getPreset("ts").iterator().next();
+
+        // Quote style differences normalize to same result
+        assertEquals(
+            normalizer.normalize("const name = \"app\""),
+            normalizer.normalize("const name = 'app'")
+        );
+
+        // Semicolons normalize to same result
+        assertEquals(
+            normalizer.normalize("const x = 1;"),
+            normalizer.normalize("const x = 1")
+        );
+
+        // Trailing commas normalize to same result (inline)
+        assertEquals(
+            normalizer.normalize("const obj = {a: 1, b: 2}"),
+            normalizer.normalize("const obj = {a: 1, b: 2,}")
+        );
+
+        // Combined Biome vs Prettier differences on single-line constructs
+        String biome = "const x = \"hello\"";
+        String prettier = "const x = 'hello';";
+        assertEquals(
+            normalizer.normalize(biome),
+            normalizer.normalize(prettier)
+        );
+    }
+
+    @Test
     void testJavaScriptPreset() {
         Collection<FileTypeNormalizer> presets = NormalizerPresets.getPreset(
             "js"
@@ -135,6 +245,46 @@ class NormalizerPresetsTest {
         assertTrue(normalizer.getExtensions().contains("cjs"));
         assertTrue(normalizer.isRemoveDoubleSpaces());
         assertTrue(normalizer.isRemoveTabs());
+    }
+
+    @Test
+    void testJavaScriptQuoteNormalization() {
+        FileTypeNormalizer normalizer = NormalizerPresets.getPreset("js").iterator().next();
+
+        // Single quotes normalized to double quotes
+        assertEquals(
+            "const x = \"hello\"",
+            normalizer.normalize("const x = 'hello'")
+        );
+
+        // Both styles normalize to same result
+        assertEquals(
+            normalizer.normalize("const x = 'hello'"),
+            normalizer.normalize("const x = \"hello\"")
+        );
+    }
+
+    @Test
+    void testJavaScriptTrailingCommasAndSemicolons() {
+        FileTypeNormalizer normalizer = NormalizerPresets.getPreset("js").iterator().next();
+
+        // Inline trailing commas and semicolons normalize equivalently
+        assertEquals(
+            normalizer.normalize("const obj = {a: 1, b: 2,}"),
+            normalizer.normalize("const obj = {a: 1, b: 2}")
+        );
+
+        // Semicolons at end of line are removed
+        assertEquals(
+            normalizer.normalize("const x = 1;"),
+            normalizer.normalize("const x = 1")
+        );
+
+        // Combined: quotes + trailing comma + semicolons
+        assertEquals(
+            normalizer.normalize("const x = \"hello\";"),
+            normalizer.normalize("const x = 'hello'")
+        );
     }
 
     @Test
@@ -298,6 +448,10 @@ class NormalizerPresetsTest {
         String minified = "{\"name\":\"test\",\"values\":[1,2,3]}";
         String pretty = "{\n  \"name\": \"test\",\n  \"values\": [\n    1,\n    2,\n    3\n  ]\n}";
         assertEquals(normalizer.normalize(minified), normalizer.normalize(pretty));
+
+        // Test trailing commas (JSONC/Biome compatibility)
+        String withTrailingCommas = "{\n  \"name\": \"test\",\n  \"values\": [1, 2, 3,],\n}";
+        assertEquals(normalizer.normalize(minified), normalizer.normalize(withTrailingCommas));
     }
 
     @Test

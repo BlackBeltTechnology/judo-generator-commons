@@ -64,6 +64,24 @@ public final class NormalizerPresets {
                                 .replacement("")
                                 .flags(List.of("MULTILINE"))
                                 .build(),
+                        // Normalize single quotes to double quotes (simple strings only, not containing the other quote)
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("'([^'\\\\]*(?:\\\\.[^'\\\\]*)*)'")
+                                .replacement("\"$1\"")
+                                .flags(List.of())
+                                .build(),
+                        // Remove trailing commas before closing brackets/braces/parens
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern(",\\s*([}\\]\\)])")
+                                .replacement("$1")
+                                .flags(List.of())
+                                .build(),
+                        // Remove optional semicolons at end of lines
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern(";\\s*$")
+                                .replacement("")
+                                .flags(List.of("MULTILINE"))
+                                .build(),
                         // Collapse multiple newlines to single
                         NormalizerPattern.normalizerPatternBuilder()
                                 .pattern("\\n{2,}")
@@ -82,6 +100,24 @@ public final class NormalizerPresets {
                 .patterns(List.of(
                         NormalizerPattern.normalizerPatternBuilder()
                                 .pattern("^import\\s+.*?['\"];?\\s*$")
+                                .replacement("")
+                                .flags(List.of("MULTILINE"))
+                                .build(),
+                        // Normalize single quotes to double quotes (simple strings only, not containing the other quote)
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern("'([^'\\\\]*(?:\\\\.[^'\\\\]*)*)'")
+                                .replacement("\"$1\"")
+                                .flags(List.of())
+                                .build(),
+                        // Remove trailing commas before closing brackets/braces/parens
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern(",\\s*([}\\]\\)])")
+                                .replacement("$1")
+                                .flags(List.of())
+                                .build(),
+                        // Remove optional semicolons at end of lines
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern(";\\s*$")
                                 .replacement("")
                                 .flags(List.of("MULTILINE"))
                                 .build(),
@@ -296,6 +332,12 @@ public final class NormalizerPresets {
                 .removeTabs(true)
                 .removeNewLines(true)
                 .patterns(List.of(
+                        // Remove trailing commas before closing brackets/braces (JSONC/Biome compatibility)
+                        NormalizerPattern.normalizerPatternBuilder()
+                                .pattern(",\\s*([}\\]])")
+                                .replacement("$1")
+                                .flags(List.of())
+                                .build(),
                         // Remove spaces outside of strings (simplified: remove spaces around structural chars)
                         NormalizerPattern.normalizerPatternBuilder()
                                 .pattern("\\s*([{}\\[\\]:,])\\s*")
