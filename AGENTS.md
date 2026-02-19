@@ -28,48 +28,29 @@ Each meta-model has three related modules:
 
 ### Core Components
 
+```mermaid
+flowchart TD
+    MG[ModelGenerator<br/>Central orchestrator]
+    MGC[ModelGeneratorContext<br/>State & configuration]
+    GM[GeneratorModel<br/>Template collection]
+    TE[TemplateEvaluator<br/>Expression evaluation]
+    GT[GeneratorTemplate<br/>Single template config]
+
+    MG --> MGC
+    MGC --> GM
+    MGC --> TE
+    GM --> GT
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    ModelGenerator                            │
-│  Central orchestrator for generation workflow                │
-│  - generateToDirectory()                                     │
-│  - resetChecksums()                                          │
-│  - recalculateChecksumToDirectory()                          │
-│  - cleanGeneratedFromChecksum()                              │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│              ModelGeneratorContext                           │
-│  State management and engine configuration                   │
-│  - Handlebars template engine                                │
-│  - Spring EL evaluation context                              │
-│  - Helper registration                                       │
-│  - Value resolver collection                                 │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                 ┌────────────┴────────────┐
-                 ▼                         ▼
-┌─────────────────────────┐   ┌──────────────────────────┐
-│    GeneratorModel       │   │  TemplateEvaulator       │
-│  Template collection    │   │  Expression evaluation   │
-│  - YAML deserialization │   │  - Factory expressions   │
-│  - Override mechanism   │   │  - Path expressions      │
-│  - Global config        │   │  - Condition evaluation  │
-└─────────────────────────┘   └──────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────┐
-│   GeneratorTemplate     │
-│  Single template config │
-│  - pathExpression       │
-│  - factoryExpression    │
-│  - conditionExpression  │
-│  - templateContext      │
-│  - actorTypeBased       │
-│  - permissions          │
-└─────────────────────────┘
-```
+
+**ModelGenerator** - Central orchestrator with methods: `generateToDirectory()`, `resetChecksums()`, `recalculateChecksumToDirectory()`, `cleanGeneratedFromChecksum()`
+
+**ModelGeneratorContext** - State management: Handlebars engine, SpringEL context, helper registration, value resolvers
+
+**GeneratorModel** - Template collection: YAML deserialization, override mechanism, global config
+
+**TemplateEvaluator** - Expression evaluation: factory, path, and condition expressions
+
+**GeneratorTemplate** - Single template config: pathExpression, factoryExpression, conditionExpression, templateContext, actorTypeBased, permissions
 
 ### Design Patterns
 
@@ -98,86 +79,80 @@ Each meta-model has three related modules:
 
 ### Complete Flow
 
+**1. ModelGenerator.generateToDirectory(GeneratorParameter)**
+
+```mermaid
+flowchart LR
+    E1[Setup logger] --> E2[Execute performExecutor]
+    E2 --> E3[Write actor-based files]
+    E3 --> E4[Write common files]
+    E3 -.->|calls| WD[writeDirectory]
+    E4 -.->|calls| WD
 ```
-1. Entry: ModelGenerator.generateToDirectory(GeneratorParameter)
-   │
-   ├─→ Setup: Parameter logger initialization
-   │
-   ├─→ Execute: performExecutor.apply(parameter) → GeneratorResult
-   │
-   ├─→ Write by discriminator (actor-based):
-   │   For each entry in GeneratorResult.generatedByDiscriminator:
-   │     writeDirectory(files, actorTargetDir, .generated-files-[actor])
-   │
-   └─→ Write common files:
-       writeDirectory(files, targetDir, .generated-files)
 
-2. Inside writeDirectory():
-   │
-   ├─→ Filter files by condition
-   │
-   ├─→ Load .generator-ignore patterns
-   │
-   ├─→ Load .generator-checksum-ignore patterns
-   │
-   ├─→ Read saved .generated-files index (checksums)
-   │
-   ├─→ Calculate current filesystem checksums
-   │
-   ├─→ Validate checksums (detect manual modifications)
-   │
-   ├─→ Determine write/delete operations
-   │
-   ├─→ Write files with POSIX permissions
-   │
-   └─→ Update .generated-files index
+---
 
-3. File Generation (generateFile):
-   │
-   ├─→ Evaluate condition expression → boolean
-   │   (Skip if false)
-   │
-   ├─→ Evaluate path expression → file path string
-   │
-   ├─→ Generate content:
-   │   ├─ Copy mode: Binary file copy
-   │   └─ Template mode: Handlebars apply with context
-   │
-   ├─→ Resolve permissions (template > model > null)
-   │
-   └─→ Return GeneratedFile
+**2. writeDirectory()**
+
+```mermaid
+flowchart LR
+    W1[Filter by condition] --> W2[Load ignore patterns]
+    W2 --> W3[Read checksums]
+    W3 --> W4[Validate checksums]
+    W4 --> W5[Write files]
+    W5 --> W6[Update index]
+```
+
+---
+
+**3. generateFile()**
+
+```mermaid
+flowchart LR
+    G1[Evaluate condition] --> G2[Evaluate path]
+    G2 --> G3{Copy mode?}
+    G3 -->|yes| G4a[Binary copy]
+    G3 -->|no| G4b[Apply template]
+    G4a --> G5[Set permissions]
+    G4b --> G5
+    G5 --> G6[Return GeneratedFile]
 ```
 
 ### Expression Evaluation Sequence
 
-```
-YAML Template → Jackson Deserialization → GeneratorTemplate
-      │
-      ├─→ SpringEL Parser → Expressions parsed
-      │   - factoryExpression
-      │   - pathExpression  
-      │   - conditionExpression
-      │   - templateContext expressions
-      │
-      ├─→ StandardEvaluationContext created
-      │   - Registered helper static methods
-      │   - Variables: self, model, actorType (if applicable)
-      │
-      ├─→ Handlebars Template creation
-      │   - Inline template (templateName: null)
-      │   - Named template loaded from URL
-      │
-      └─→ TemplateEvaulator instantiation
+**Initialization Phase**
 
-During generateFile():
-  ├─→ Condition evaluation → boolean (skip if false)
-  ├─→ Path evaluation → String (file path)
-  ├─→ Factory evaluation → Collection<?> (items to iterate)
-  ├─→ For each item:
-  │     ├─→ Build Handlebars Context
-  │     ├─→ Bind context via contextAccessor
-  │     └─→ Apply template → byte[] content
-  └─→ Return GeneratedFile(path, content, permissions)
+```mermaid
+flowchart TD
+    Y[YAML Template] --> J[Jackson Deserialization]
+    J --> GT[GeneratorTemplate]
+    GT --> SP[SpringEL Parser]
+    SP --> EX1[factoryExpression]
+    SP --> EX2[pathExpression]
+    SP --> EX3[conditionExpression]
+    SP --> EX4[templateContext]
+    GT --> SEC[StandardEvaluationContext]
+    SEC --> H[Register helper methods]
+    SEC --> V[Set variables: self, model, actorType]
+    GT --> HT{templateName?}
+    HT -->|null| IT[Inline template]
+    HT -->|path| NT[Load from URL]
+    GT --> TE[TemplateEvaluator instantiation]
+```
+
+---
+
+**Runtime Phase (generateFile)**
+
+```mermaid
+flowchart LR
+    R1[Evaluate condition] --> R2[Evaluate path]
+    R2 --> R3[Evaluate factory]
+    R3 --> R4[For each item]
+    R4 --> R5[Build Handlebars Context]
+    R5 --> R6[Bind via contextAccessor]
+    R6 --> R7[Apply template]
+    R7 --> R8[Return GeneratedFile]
 ```
 
 ## Key Files Reference
@@ -246,26 +221,20 @@ During generateFile():
 
 #### Registration Flow
 
+```mermaid
+flowchart LR
+    A[1. Annotate<br/>@TemplateHelper] --> B[2. Discovery<br/>TemplateHelperFinder]
+    B --> C[3. Register<br/>Handlebars.registerHelpers]
+    C --> D[4. Use<br/>Template or SpringEL]
 ```
-1. Annotate class with @TemplateHelper
-   @TemplateHelper
-   public class MyHelper extends StaticMethodValueResolver {
-       public static String myMethod(Object obj) { ... }
-   }
 
-2. TemplateHelperFinder scans classpath
-   - Uses ClassGraph for annotation scanning
-   - Package filtering support
-   - Custom ClassLoader support
+**Step 1 - Annotate**: Add `@TemplateHelper`, extend `StaticMethodValueResolver`, create public static methods
 
-3. Add to ModelGeneratorContext.helpers
-   
-4. Handlebars registers via handlebars.registerHelpers(clazz)
+**Step 2 - Discovery**: `TemplateHelperFinder` scans classpath using ClassGraph with package filtering
 
-5. Available in templates and SpringEL
-   - Template: {{myMethod someValue}}
-   - SpringEL: #myMethod(someValue)
-```
+**Step 3 - Registration**: Added to `ModelGeneratorContext.helpers`, registered with Handlebars
+
+**Step 4 - Usage**: In templates `{{myMethod value}}` or SpringEL `#myMethod(value)`
 
 #### Helper Requirements
 
@@ -486,7 +455,72 @@ generated/*
 - Fallback for non-POSIX systems (Windows)
 - Creates parent directories automatically
 
-### 4. GitIgnore Synchronization
+### 4. Whitespace-Tolerant Comparison
+
+**Purpose**: Detect semantically equivalent files despite formatting differences
+
+**Problem**: Code formatters (Prettier, IDE auto-format) modify generated files, causing false checksum mismatches when builds fail before checksum regeneration.
+
+**Configuration** (in generator model YAML):
+```yaml
+fileNormalizers:
+  # Auto-detect all supported languages
+  - preset: auto
+  
+  # Or specific presets
+  - preset: java
+  - preset: ts
+  
+  # Or custom configuration
+  - extensions: [java, kt]
+    removeDoubleSpaces: true
+    removeTabs: true
+    patterns:
+      - pattern: "^import\\s+.*?;\\s*$"
+        flags: [MULTILINE]
+```
+
+**Built-in Presets**:
+| Preset | Extensions | Description |
+|--------|------------|-------------|
+| `auto` | All below | Auto-detect by extension |
+| `java` | .java | Remove imports, collapse whitespace |
+| `ts` | .ts, .tsx | Remove imports, collapse whitespace |
+| `js` | .js, .jsx, .mjs, .cjs | Remove imports, collapse whitespace |
+| `rust` | .rs | Remove use statements, collapse whitespace |
+| `go` | .go | Remove imports, collapse whitespace |
+| `python` | .py | Remove imports, collapse whitespace |
+
+**Normalization Order**:
+1. Line endings: CRLF → LF (always)
+2. Boolean flags: tabs → double spaces → newlines
+3. Custom regex patterns (in configured order)
+
+**Workflow**:
+```
+1. Checksum mismatch detected
+2. If normalizer configured for file extension:
+   a. Load filesystem and generated content
+   b. Apply normalizations to both
+   c. Compare normalized content
+   d. If equal: keep file, update checksum (INFO log)
+   e. If different: proceed with normal validation
+3. If no normalizer: use standard checksum validation
+```
+
+**Implementation Files**:
+- `NormalizerPattern.java` - Regex pattern with flags
+- `FileTypeNormalizer.java` - Per-extension normalizer config
+- `FileNormalizerRegistry.java` - Registry by extension
+- `ContentComparator.java` - Normalized comparison utility
+- `NormalizerPresets.java` - Built-in preset definitions
+
+**Logging**: INFO level when checksum auto-updated
+```
+INFO: File 'Foo.java' has equivalent normalized content, updating checksum
+```
+
+### 5. GitIgnore Synchronization
 
 **Purpose**: Auto-update .gitignore with generated files
 
@@ -506,7 +540,7 @@ generated/*
 - Adds block if not present
 - Method: `addGeneratedFiles(Collection<GeneratorFileEntry>)`
 
-### 5. SpringEL Expression System
+### 6. SpringEL Expression System
 
 **Engine**: Spring Expression Language 6.2.7
 
@@ -1158,6 +1192,61 @@ GeneratorParameter param = GeneratorParameter.builder()
 
 ModelGenerator.generateToDirectory(param);
 ```
+
+---
+
+## Modular Documentation
+
+This project includes modular, component-focused documentation packaged in the JAR for consumer projects.
+
+### Documentation Structure
+
+```
+src/main/resources/agent-docs/
+├── index.md                    # Entry point with navigation
+├── components/                 # Per-component documentation
+│   ├── model-generator.md      # Orchestration and workflow
+│   ├── template-system.md      # Handlebars and SpringEL
+│   ├── helpers.md              # Helper creation guide
+│   ├── checksum-validation.md  # Checksum management
+│   └── generator-ignore.md     # Ignore patterns
+└── guides/                     # Audience-specific guides
+    ├── ai-assistant.md         # Quick reference for AI assistants
+    ├── user-guide.md           # Getting started for developers
+    └── api-reference.md        # Detailed API documentation
+```
+
+### Claude Code Skills
+
+Skills are available in `.claude/skills/` and packaged to `claude-skills/` in the JAR:
+
+| Skill | Description |
+|-------|-------------|
+| `generate-helper` | Create new Handlebars helper classes |
+
+### Marketplace Catalog
+
+The `claude-marketplace.json` at project root lists available skills:
+
+```json
+{
+  "name": "judo-generator-commons-marketplace",
+  "plugins": [
+    {
+      "name": "generate-helper",
+      "source": "./.claude/skills/generate-helper",
+      "description": "Create a new Handlebars helper class with tests"
+    }
+  ]
+}
+```
+
+### For Consumer Projects
+
+Consumer projects can:
+1. Add judo-generator-commons as a Maven dependency
+2. Access `agent-docs/` documentation from classpath
+3. Extract skills from `claude-skills/` in the JAR to their own `.claude/skills/`
 
 ---
 
