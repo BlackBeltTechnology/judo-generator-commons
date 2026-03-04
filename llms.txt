@@ -57,6 +57,28 @@ Key facts:
 - [GeneratorIgnoreTest.java](src/test/java/hu/blackbelt/judo/generator/commons/GeneratorIgnoreTest.java): GLOB pattern matching and hierarchy tests
 - [ChecksumIgnoreTest.java](src/test/java/hu/blackbelt/judo/generator/commons/ChecksumIgnoreTest.java): Checksum ignore pattern tests
 
+## Depends on
+
+- [osgi-repackaged-bundles](../../packages/osgi-repackaged-bundles): packages/osgi-repackaged-bundles
+
+## Used by
+
+- [judo-meta-esm](../../models/judo-meta-esm): models/judo-meta-esm
+- [judo-meta-jsl](../../models/judo-meta-jsl): models/judo-meta-jsl
+- [judo-meta-psm](../../models/judo-meta-psm): models/judo-meta-psm
+- [judo-meta-ui](../../models/judo-meta-ui): models/judo-meta-ui
+- [judo-tatami-jsl-tests](../judo-tatami-jsl-tests): runtime/judo-tatami-jsl-tests
+- [judo-tatami-tests](../judo-tatami-tests): runtime/judo-tatami-tests
+- [judo-esm-fullstack-project-template](../../template/judo-esm-fullstack-project-template): template/judo-esm-fullstack-project-template
+- [judo-jsl-fullstack-karaf-project-template](../../template/judo-jsl-fullstack-karaf-project-template): template/judo-jsl-fullstack-karaf-project-template
+- [judo-psm-generator-jaxrs](../../template/judo-psm-generator-jaxrs): template/judo-psm-generator-jaxrs
+- [judo-psm-generator-report](../../template/judo-psm-generator-report): template/judo-psm-generator-report
+- [judo-psm-generator-restassured](../../template/judo-psm-generator-restassured): template/judo-psm-generator-restassured
+- [judo-psm-generator-sdk-core](../../template/judo-psm-generator-sdk-core): template/judo-psm-generator-sdk-core
+- [judo-ui-e2e-template](../../template/judo-ui-e2e-template): template/judo-ui-e2e-template
+- [judo-ui-react-template](../../template/judo-ui-react-template): template/judo-ui-react-template
+- [judo-ui-typescript-rest-template](../../template/judo-ui-typescript-rest-template): template/judo-ui-typescript-rest-template
+
 ## Optional
 
 - [pom.xml](pom.xml): Maven build configuration with OSGi, JaCoCo, and release profiles
