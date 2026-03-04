@@ -1,0 +1,64 @@
+# JUDO Generator Commons
+
+> Template-based code generation framework that transforms meta-models into code using Handlebars templates and SpringEL expressions, providing checksum validation, generator ignore patterns, and incremental generation.
+
+Key facts:
+- Language: Java 21
+- Build tool: Maven 3.9.4, single module, OSGi Bundle packaging
+- Main technologies: Handlebars 4.4.0, Spring Expression Language 6.2.7, Jackson YAML 2.17.2, ClassGraph 4.8.152
+- Used by JUDO meta-model generators (ESM, PSM, UI)
+- License: Eclipse Public License 2.0
+
+## Docs
+
+- [README.md](README.md): Project overview with architecture diagrams and usage examples
+- [AGENTS.md](AGENTS.md): Comprehensive AI agent instructions covering architecture, workflows, helpers, YAML descriptors, and troubleshooting
+- [CONTRIBUTING.md](CONTRIBUTING.md): Contribution guidelines and development setup
+
+## Core Generation
+
+- [ModelGenerator.java](src/main/java/hu/blackbelt/judo/generator/commons/ModelGenerator.java): Central orchestrator — generateToDirectory(), writeDirectory(), checksum management
+- [ModelGeneratorContext.java](src/main/java/hu/blackbelt/judo/generator/commons/ModelGeneratorContext.java): State container with Handlebars engine and SpringEL evaluation context
+- [GeneratorModel.java](src/main/java/hu/blackbelt/judo/generator/commons/GeneratorModel.java): YAML-based template collection with override mechanism
+- [GeneratorTemplate.java](src/main/java/hu/blackbelt/judo/generator/commons/GeneratorTemplate.java): Single template configuration (path, factory, condition expressions)
+- [GeneratorParameter.java](src/main/java/hu/blackbelt/judo/generator/commons/GeneratorParameter.java): Builder-pattern configuration for generation runs
+- [TemplateEvaulator.java](src/main/java/hu/blackbelt/judo/generator/commons/TemplateEvaulator.java): SpringEL expression evaluation for templates
+
+## Template System
+
+- [ChainedURLTemplateLoader.java](src/main/java/hu/blackbelt/judo/generator/commons/ChainedURLTemplateLoader.java): Parent-child template loading with .override.hbs support
+- [TemplateHelperFinder.java](src/main/java/hu/blackbelt/judo/generator/commons/TemplateHelperFinder.java): ClassGraph-based @TemplateHelper annotation scanning
+- [StaticMethodValueResolver.java](src/main/java/hu/blackbelt/judo/generator/commons/StaticMethodValueResolver.java): Base class for helper classes with method caching
+- [ThreadLocalContextHolder.java](src/main/java/hu/blackbelt/judo/generator/commons/ThreadLocalContextHolder.java): Thread-safe context access for parallel template generation
+
+## Annotations
+
+- [TemplateHelper.java](src/main/java/hu/blackbelt/judo/generator/commons/annotations/TemplateHelper.java): Marks helper classes for auto-discovery
+- [ContextAccessor.java](src/main/java/hu/blackbelt/judo/generator/commons/annotations/ContextAccessor.java): Signals bindContext(Map) availability for thread-local access
+
+## Utilities
+
+- [ChecksumUtil.java](src/main/java/hu/blackbelt/judo/generator/commons/ChecksumUtil.java): MD5 hash calculation for incremental generation
+- [GeneratorIgnore.java](src/main/java/hu/blackbelt/judo/generator/commons/GeneratorIgnore.java): GLOB-based file exclusion (.generator-ignore)
+- [ChecksumIgnore.java](src/main/java/hu/blackbelt/judo/generator/commons/ChecksumIgnore.java): Checksum validation override (.generator-checksum-ignore)
+- [GitIgnoreSynchronizer.java](src/main/java/hu/blackbelt/judo/generator/commons/GitIgnoreSynchronizer.java): Auto-updates .gitignore with generated file entries
+- [UriHelper.java](src/main/java/hu/blackbelt/judo/generator/commons/UriHelper.java): URI manipulation utilities
+- [StringHelper.java](src/main/java/hu/blackbelt/judo/generator/commons/StringHelper.java): String transformation Handlebars helpers
+
+## Data Models
+
+- [GeneratedFile.java](src/main/java/hu/blackbelt/judo/generator/commons/GeneratedFile.java): Single generated file (path, content, permissions)
+- [GeneratorFileEntry.java](src/main/java/hu/blackbelt/judo/generator/commons/GeneratorFileEntry.java): Persisted checksum entry (path, checksum)
+- [GeneratorResult.java](src/main/java/hu/blackbelt/judo/generator/commons/GeneratorResult.java): Generation result container with actor-based discriminators
+
+## Tests
+
+- [ModelGeneratorTest.java](src/test/java/hu/blackbelt/judo/generator/commons/ModelGeneratorTest.java): File writing, checksums, gitignore synchronization tests
+- [GeneratorIgnoreTest.java](src/test/java/hu/blackbelt/judo/generator/commons/GeneratorIgnoreTest.java): GLOB pattern matching and hierarchy tests
+- [ChecksumIgnoreTest.java](src/test/java/hu/blackbelt/judo/generator/commons/ChecksumIgnoreTest.java): Checksum ignore pattern tests
+
+## Optional
+
+- [pom.xml](pom.xml): Maven build configuration with OSGi, JaCoCo, and release profiles
+- [LICENSE.txt](LICENSE.txt): Eclipse Public License 2.0
+- [.github/workflows/build.yml](.github/workflows/build.yml): CI/CD pipeline
