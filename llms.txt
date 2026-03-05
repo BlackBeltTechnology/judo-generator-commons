@@ -59,25 +59,25 @@ Key facts:
 
 ## Depends on
 
-- [osgi-repackaged-bundles](../../packages/osgi-repackaged-bundles): packages/osgi-repackaged-bundles
+- [osgi-repackaged-bundles](../../packages/osgi-repackaged-bundles): Third-party libraries repackaged as OSGi bundles for Karaf
 
 ## Used by
 
-- [judo-meta-esm](../../models/judo-meta-esm): models/judo-meta-esm
-- [judo-meta-jsl](../../models/judo-meta-jsl): models/judo-meta-jsl
-- [judo-meta-psm](../../models/judo-meta-psm): models/judo-meta-psm
-- [judo-meta-ui](../../models/judo-meta-ui): models/judo-meta-ui
-- [judo-tatami-jsl-tests](../judo-tatami-jsl-tests): runtime/judo-tatami-jsl-tests
-- [judo-tatami-tests](../judo-tatami-tests): runtime/judo-tatami-tests
-- [judo-esm-fullstack-project-template](../../template/judo-esm-fullstack-project-template): template/judo-esm-fullstack-project-template
-- [judo-jsl-fullstack-karaf-project-template](../../template/judo-jsl-fullstack-karaf-project-template): template/judo-jsl-fullstack-karaf-project-template
-- [judo-psm-generator-jaxrs](../../template/judo-psm-generator-jaxrs): template/judo-psm-generator-jaxrs
-- [judo-psm-generator-report](../../template/judo-psm-generator-report): template/judo-psm-generator-report
-- [judo-psm-generator-restassured](../../template/judo-psm-generator-restassured): template/judo-psm-generator-restassured
-- [judo-psm-generator-sdk-core](../../template/judo-psm-generator-sdk-core): template/judo-psm-generator-sdk-core
-- [judo-ui-e2e-template](../../template/judo-ui-e2e-template): template/judo-ui-e2e-template
-- [judo-ui-react-template](../../template/judo-ui-react-template): template/judo-ui-react-template
-- [judo-ui-typescript-rest-template](../../template/judo-ui-typescript-rest-template): template/judo-ui-typescript-rest-template
+- [judo-meta-esm](../../models/judo-meta-esm): ESM metamodel — business entities, operations, access points, and UI structures
+- [judo-meta-jsl](../../models/judo-meta-jsl): JSL language toolchain — grammar, parser, validator, code generator, and LSP servers
+- [judo-meta-psm](../../models/judo-meta-psm): PSM metamodel — foundational platform-specific data model
+- [judo-meta-ui](../../models/judo-meta-ui): UI metamodel — pages, containers, tables, inputs, and data bindings
+- [judo-tatami-jsl-tests](../judo-tatami-jsl-tests): Full-stack test application generation from JSL model definitions
+- [judo-tatami-tests](../judo-tatami-tests): Integration test suite demonstrating platform capabilities
+- [judo-esm-fullstack-project-template](../../template/judo-esm-fullstack-project-template): Code generation archetype for fullstack JUDO applications from ESM
+- [judo-jsl-fullstack-karaf-project-template](../../template/judo-jsl-fullstack-karaf-project-template): Project template generator for fullstack Karaf-based JUDO applications
+- [judo-psm-generator-jaxrs](../../template/judo-psm-generator-jaxrs): Generates JAX-RS interfaces, DTOs, and service implementations from PSM
+- [judo-psm-generator-report](../../template/judo-psm-generator-report): Generates JasperReports reporting solutions from PSM models
+- [judo-psm-generator-restassured](../../template/judo-psm-generator-restassured): Generates REST Assured test API clients from PSM
+- [judo-psm-generator-sdk-core](../../template/judo-psm-generator-sdk-core): Generates SDK core layer — DAOs, DTOs, builders, and DI wiring from PSM
+- [judo-ui-e2e-template](../../template/judo-ui-e2e-template): Generates Playwright E2E test projects from UI models
+- [judo-ui-react-template](../../template/judo-ui-react-template): Generates React/TypeScript frontend applications from UI models
+- [judo-ui-typescript-rest-template](../../template/judo-ui-typescript-rest-template): Generates TypeScript REST API client code from UI metamodels
 
 ## Optional
 
