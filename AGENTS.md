@@ -1228,37 +1228,11 @@ src/main/resources/agent-docs/
     └── api-reference.md        # Detailed API documentation
 ```
 
-### Claude Code Skills
-
-Skills are available in `.claude/skills/` and packaged to `claude-skills/` in the JAR:
-
-| Skill | Description |
-|-------|-------------|
-| `generate-helper` | Create new Handlebars helper classes |
-
-### Marketplace Catalog
-
-The `claude-marketplace.json` at project root lists available skills:
-
-```json
-{
-  "name": "judo-generator-commons-marketplace",
-  "plugins": [
-    {
-      "name": "generate-helper",
-      "source": "./.claude/skills/generate-helper",
-      "description": "Create a new Handlebars helper class with tests"
-    }
-  ]
-}
-```
-
 ### For Consumer Projects
 
 Consumer projects can:
 1. Add judo-generator-commons as a Maven dependency
 2. Access `agent-docs/` documentation from classpath
-3. Extract skills from `claude-skills/` in the JAR to their own `.claude/skills/`
 
 ---
 
