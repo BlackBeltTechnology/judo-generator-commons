@@ -1133,6 +1133,7 @@ conditionExpression: "#actorType.hasChanges()"
 | `GeneratorParameter.Builder` | `build()` | Configure generation |
 | `TemplateHelperFinder` | `collectHelpers()` | Find helper classes |
 | `ChecksumUtil` | `getMD5()` | Calculate checksum |
+| `ModelCache` | `open(scope)` / `get(scope, key, loader)` | Generation-run memoization for `@TemplateHelper`s. Engines open a scope per model `ResourceSet` (identity, ref-counted, dropped on last close → no model leak); `get` computes each key once across threads; outside a scope `get` just calls the loader. Model must not change while open; a loader must not request its own key. See change: JNG-6430 |
 
 ### YAML Template Properties
 
