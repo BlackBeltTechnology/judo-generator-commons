@@ -46,6 +46,13 @@ public abstract class StaticMethodValueResolver implements ValueResolver {
 
     private LoadingCache<String, Collection<Method>> methodListCacheByContextAndName = CacheBuilder.newBuilder().build(methodListLoaderByName);
 
+    /**
+     * Resolved method per context class and helper name ({@link Optional#empty()} = no match). The match depends on the
+     * context class only, and templates call helpers per element, so the former per-call lookup (reflection,
+     * {@code getParameters()} allocation, superclass walk) dominated template rendering.
+     */
+    private final Map<Class<?>, Map<String, Optional<Method>>> methodByContextClassAndName = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Override
     public Object resolve(Object context, String name) {
         try {
@@ -74,15 +81,29 @@ public abstract class StaticMethodValueResolver implements ValueResolver {
     }
 
     private AtomicReference<Method> getMethodByContextClassByName(Object context, String name) {
+        Class<?> contextClass = context.getClass();
+        Optional<Method> resolved = methodByContextClassAndName
+                .computeIfAbsent(contextClass, c -> new java.util.concurrent.ConcurrentHashMap<>())
+                .computeIfAbsent(name, n -> Optional.ofNullable(findMethodByContextClassByName(context, n)));
+        if (resolved.isEmpty()) {
+            warnOnMismatch(context, name);
+        }
+        return new AtomicReference<>(resolved.orElse(null));
+    }
 
-        AtomicReference<Method> method = new AtomicReference<>(null);
-        AtomicReference<Class> contextClassRef = new AtomicReference<>(context.getClass());
-        Collection<Method> methods = null;
+    private Collection<Method> methodsByName(String name) {
         try {
-            methods = methodListCacheByContextAndName.get(name);
+            return methodListCacheByContextAndName.get(name);
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Method findMethodByContextClassByName(Object context, String name) {
+
+        AtomicReference<Method> method = new AtomicReference<>(null);
+        AtomicReference<Class> contextClassRef = new AtomicReference<>(context.getClass());
+        Collection<Method> methods = methodsByName(name);
 
         while (method.get() == null && contextClassRef.get() != null) {
             methods.stream()
@@ -92,10 +113,14 @@ public abstract class StaticMethodValueResolver implements ValueResolver {
                             contextClassRef.set(contextClassRef.get().getSuperclass())
                     );
         }
+        return method.get();
+    }
 
+    /** The former warning for a helper name that exists with a non-matching signature; logged on every such call. */
+    private void warnOnMismatch(Object context, String name) {
+        Collection<Method> methods = methodsByName(name);
         if (!context.getClass().getName().equals("java.lang.Object")
             && !(context instanceof Map)
-                && method.get() == null
                 && methods.stream().anyMatch(m -> m.getName().equals(name))) {
             for (Method methodByName : methods.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList())) {
                 String methodParameters = " Method parameter(s): \n\t" + Arrays.stream(methodByName.getParameters()).sequential()
@@ -105,7 +130,6 @@ public abstract class StaticMethodValueResolver implements ValueResolver {
                         " Value: " + (context == null ? "null" : context.toString()) + methodParameters);
             }
         }
-        return method;
     }
 
     @Override
